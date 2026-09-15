@@ -1,0 +1,117 @@
+Isaac Deadgod Tracker — Personal Use License
+Copyright (c) 2026 veryhighlibido. All rights reserved.
+
+This is NOT an open source license. The source code is published so that it can
+be read and so that a user can build the application for themselves. Everything
+that is not explicitly permitted below is reserved.
+
+1. DEFINITIONS
+
+   "Software" means the source code, configuration, build scripts and data files
+   in this repository that are authored by the copyright holder, together with
+   the executables built from them.
+
+   "You" means the individual exercising the permissions below. These
+   permissions are granted to individuals only, acting for themselves.
+
+   "Third-Party Material" means the fonts, game sprites and dependencies listed
+   in the NOTICE file. They are not owned by the copyright holder and are not
+   licensed by this document.
+
+2. WHAT YOU MAY DO
+
+   a. Run the Software on computers you own or control, for your own personal,
+      non-commercial use, including use during a stream or a video you produce.
+
+   b. Read, study and clone the source code for that purpose.
+
+   c. Build the Software from source yourself, instead of using an official
+      release binary, and run the result under the terms of section 2(a).
+
+   d. Modify your own private copy for your own personal use under section 2(a).
+
+   e. Submit a modification back to the copyright holder as a pull request or a
+      patch (see section 5).
+
+   f. Fork this repository with the built-in forking feature of the platform on
+      which the copyright holder published it, and keep that fork on the same
+      platform, since the platform's terms of service require the copyright
+      holder to allow it. A fork is a copy like any other: every other term of
+      this License continues to apply to it, in particular section 3, so You may
+      not publish builds made from it, move it or its contents off that
+      platform, or reuse any part of it in another work. This permission covers
+      no other hosting, mirroring or republication of any kind.
+
+3. WHAT YOU MAY NOT DO
+
+   Without prior written permission from the copyright holder, You may not:
+
+   a. Distribute, publish, upload, host, mirror, share, lend or otherwise make
+      available to any other person the Software, any part of it, any modified
+      version of it, or any binary built from it — whether for a fee or free of
+      charge, and whether or not You changed anything. The single exception is a
+      platform fork under section 2(f).
+
+   b. Copy, translate, port or otherwise reuse any part of the Software — code,
+      data files, layout, styles or assets authored by the copyright holder — in
+      any other project, product, service, mod, plugin, template or work of your
+      own or of a third party, including works that are themselves free or open
+      source.
+
+   c. Use the Software or any part of it commercially, or to obtain revenue of
+      any kind. This includes selling it, bundling it, offering it as or within
+      a paid or ad-supported product or service, and offering paid support,
+      hosting or customization for it.
+
+   d. Sublicense, rent, lease or sell rights in the Software, or transfer your
+      permissions under this License to anyone else.
+
+   e. Remove, obscure or alter any copyright notice, license notice, attribution
+      or product name in the Software.
+
+   f. Use the name "Isaac Deadgod Tracker", the copyright holder's name, or any
+      of their other product names, domains or branding, to name, endorse or
+      promote anything.
+
+   g. Circumvent any of the above by automated means, including training,
+      fine-tuning or building machine learning models on the Software, or having
+      a machine generate a derivative of it.
+
+4. NO WARRANTY, NO LIABILITY
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+   IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+   The Software reads save files and never writes to them, but You run it at
+   your own risk and remain responsible for your own backups.
+
+5. CONTRIBUTIONS
+
+   By submitting a contribution to this repository, You grant the copyright
+   holder a perpetual, worldwide, irrevocable, royalty-free right to use,
+   modify, relicense and distribute that contribution as part of the Software,
+   and You confirm that You are entitled to grant it. You receive no rights in
+   the Software beyond those in section 2.
+
+6. THIRD-PARTY MATERIAL
+
+   Third-Party Material remains under its own terms, listed in the NOTICE file.
+   Nothing in this License grants You any right in it, and nothing in this
+   License is intended to restrict rights You have under those terms.
+
+7. TERMINATION
+
+   Your permissions under this License end automatically if You breach any term
+   of it. On termination You must stop using the Software and destroy your
+   copies of it. Sections 3(b), 4 and 5 survive termination.
+
+8. OTHER TERMS
+
+   The copyright holder may grant permission for otherwise prohibited uses in
+   writing, case by case. Requests are made through the issue tracker of this
+   repository. If a provision of this License is held unenforceable, the rest
+   stays in force.

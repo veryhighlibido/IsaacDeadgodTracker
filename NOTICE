@@ -1,0 +1,65 @@
+THIRD-PARTY NOTICES
+
+The LICENSE file of this repository covers only the material authored by the
+copyright holder. The items below belong to other people, keep their own terms,
+and are redistributed here only so that the application looks and works the way
+it does.
+
+--------------------------------------------------------------------------
+Game artwork — public/gfx/**
+--------------------------------------------------------------------------
+Achievement, item, character and completion-mark sprites from
+The Binding of Isaac: Rebirth and its expansions.
+Copyright (c) Nicalis, Inc. and Edmund McMillen.
+
+Used to identify in-game unlocks inside a companion tool. This project is an
+unofficial fan-made tool, is not affiliated with, endorsed by or sponsored by
+Nicalis or Edmund McMillen, and claims no ownership of the artwork. If the
+rights holders object to its use here, it will be removed.
+
+--------------------------------------------------------------------------
+Iosevka — public/fonts/Iosevka-400.woff2, -600.woff2, -700.woff2
+--------------------------------------------------------------------------
+Copyright (c) 2015-2026, Renzhi Li (aka. Belleve Invis, belleve@typeof.net)
+Licensed under the SIL Open Font License, Version 1.1 — see
+third-party/OFL-1.1.txt. Upstream: https://github.com/be5invis/Iosevka
+The files here are subsetted WOFF2 builds of that font.
+
+--------------------------------------------------------------------------
+Rubik — public/fonts/Rubik-latin.woff2, Rubik-cyrillic.woff2
+--------------------------------------------------------------------------
+Copyright 2015 The Rubik Project Authors
+(https://github.com/googlefonts/rubik)
+Licensed under the SIL Open Font License, Version 1.1 — see
+third-party/OFL-1.1.txt.
+The files here are subsetted WOFF2 builds of that font.
+
+--------------------------------------------------------------------------
+IsaacUpheaval — public/fonts/IsaacUpheaval.woff2
+--------------------------------------------------------------------------
+The Binding of Isaac community variant of the Upheaval typeface by
+Brian Kent (Aenigma Fonts), circulated as freeware and used by fan tools for
+the series. Rights remain with the original author. Used here only for the
+wordmark.
+
+--------------------------------------------------------------------------
+Dependencies
+--------------------------------------------------------------------------
+Not vendored in this repository; fetched by npm and cargo at build time, and
+linked into release binaries. Each keeps its own license, listed in
+package-lock.json and src-tauri/Cargo.lock. The main ones:
+
+  React, React DOM              MIT
+  Vite, @vitejs/plugin-react    MIT
+  TypeScript                    Apache-2.0
+  Tauri, tauri-plugin-dialog,
+  tauri-plugin-opener           MIT or Apache-2.0
+  axum, tower-http, tokio       MIT
+  notify, serde, serde_json,
+  dirs, rust-embed, mime_guess  MIT or Apache-2.0
+
+--------------------------------------------------------------------------
+Save file format
+--------------------------------------------------------------------------
+The layout of persistentgamedata*.dat is documented by the Isaac modding
+community. No game code or game data files are included in this repository.

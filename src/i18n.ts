@@ -1,0 +1,330 @@
+import { useSyncExternalStore } from 'react';
+
+export type Lang = 'en' | 'ru';
+
+export const LANGS: Lang[] = ['en', 'ru'];
+
+const en = {
+  tabs: {
+    overview: 'Overview',
+    counters: 'Counters',
+    achievements: 'Secrets',
+    marks: 'Marks',
+    challenges: 'Challenges',
+    items: 'Items',
+    overlay: 'Overlay',
+    source: 'File',
+  },
+  noFile: 'no file selected',
+  connecting: 'connecting',
+  noService: 'no service',
+  reading: 'reading…',
+  regression: 'Progress went down',
+  regressionBody: (before: number, after: number) => `was ${before}, now ${after}`,
+  hide: 'Hide',
+  packetError: 'could not read the packet from the service',
+  parseError: 'could not parse the save file',
+  formatError: (detail: string) => `this does not look like a Repentance+ save (${detail})`,
+  errors: {
+    missing: 'the file is gone',
+    io: 'the file cannot be read',
+    header: 'not an Isaac save',
+    tooSmall: 'the file is too small',
+    tooLarge: 'the file is too large',
+    unstable: 'the game is writing the file right now',
+  } as Record<string, string>,
+  markLevel: { normal: 'normal', hard: 'hard', greed: 'greed', greedier: 'greedier' },
+  counterGoals: {
+    thimble: 'Shell games played',
+    dailyStreak: 'Daily runs in a row',
+    rubberCement: 'Rubber Cement taken',
+    beds: 'Slept in a bed',
+    batteryBum: 'Items from Battery Bum',
+  },
+  routeCounters: {
+    donation: 'Donation machine',
+    greedDonation: 'Greed donation',
+    dailies: 'Daily runs played',
+    dailyStreak: 'Daily runs in a row',
+    thimble: 'Shell games',
+    beds: 'Beds',
+    bloodDonor: 'Blood donation',
+    arcades: 'Arcades',
+    bossRush: 'Boss Rush cleared',
+    devilDeals: 'Devil deals',
+    angelDeals: 'Angel deals',
+    batteryBum: 'Battery Bum killed',
+  },
+  overlaySets: {
+    blind: 'Counters and secrets',
+    watch: 'Watched',
+    locked: 'Remaining',
+    progress: 'Score',
+    marks: 'Marks',
+  },
+  thresholds: 'Thresholds',
+  statistics: 'Statistics',
+  filters: { locked: 'Locked', all: 'All', unlocked: 'Unlocked' },
+  search: 'search',
+  empty: 'nothing here',
+  countsToward: (n: number) => `counts ${n}`,
+  secrets: 'Secrets',
+  challenges: 'Challenges',
+  items: 'Items',
+  marks: 'Marks',
+  marksNote: (hard: number, any: number, total: number) => `hard ${hard}/${total} · any ${any}/${total}`,
+  character: 'Character',
+  remaining: 'Remaining',
+  marksHard: 'Marks hard',
+  marksAny: 'Marks any',
+  counters: 'Counters',
+  extras: 'Not counted',
+  watched: 'Watched',
+  unlockLog: 'Unlocked',
+  kinds: { challenge: 'challenge', item: 'item', mark: 'mark' },
+  counterN: (index: number) => `counter ${index}`,
+  overlayLink: 'Link',
+  overlayLinkNote: 'a Browser source in OBS',
+  copy: 'Copy',
+  copied: 'Copied',
+  view: 'View',
+  iconSize: 'Icon',
+  columns: 'Columns',
+  auto: 'auto',
+  gap: 'Gap',
+  scale: 'Scale',
+  iconLimit: 'Icon limit',
+  none: 'none',
+  numbers: 'Numbers',
+  backdrop: 'Backdrop',
+  overlayLang: 'Overlay language',
+  preview: 'Preview',
+  overlayTitle: 'overlay',
+  editions: {
+    'repentance-plus': 'Repentance+',
+    repentance: 'Repentance',
+    'afterbirth-plus': 'Afterbirth+',
+    unknown: 'unknown edition',
+  } as Record<string, string>,
+  slot: (n: number) => `file ${n}`,
+  unread: 'could not be read',
+  source: 'Source',
+  path: 'Path',
+  lastRead: 'Read',
+  gameWrote: 'Game wrote',
+  snapshots: 'Snapshots',
+  failure: 'Failure',
+  pickFile: 'Choose a file',
+  reread: 'Re-read',
+  refreshList: 'Refresh list',
+  revealInFolder: 'Show in folder',
+  watching: 'Watching',
+  watch: 'Watch',
+  noSaves: 'no saves found — point to a file by hand',
+  failed: 'did not work',
+  dialogFailed: 'the dialog did not open',
+  deadGod: 'dead god',
+  overlayNoFile: 'no file',
+  left: 'left',
+  overlaySub: (marks: string, challenges: string) => `marks ${marks} · challenges ${challenges}`,
+  langToggle: 'RU',
+  langToggleTitle: 'Переключить на русский',
+  locale: 'en-GB',
+};
+
+export type Strings = typeof en;
+
+const ru: Strings = {
+  tabs: {
+    overview: 'Сводка',
+    counters: 'Счетчики',
+    achievements: 'Секреты',
+    marks: 'Марки',
+    challenges: 'Челленджи',
+    items: 'Предметы',
+    overlay: 'Оверлей',
+    source: 'Файл',
+  },
+  noFile: 'файл не выбран',
+  connecting: 'подключение',
+  noService: 'нет службы',
+  reading: 'чтение…',
+  regression: 'Прогресс убавился',
+  regressionBody: (before: number, after: number) => `было ${before}, стало ${after}`,
+  hide: 'Скрыть',
+  packetError: 'не удалось разобрать пакет от службы',
+  parseError: 'не удалось разобрать файл сохранения',
+  formatError: (detail: string) => `файл не похож на сейв Repentance+ (${detail})`,
+  errors: {
+    missing: 'файла нет на месте',
+    io: 'файл не читается',
+    header: 'это не сейв Isaac',
+    tooSmall: 'файл слишком мал',
+    tooLarge: 'файл слишком велик',
+    unstable: 'игра как раз пишет файл',
+  },
+  markLevel: { normal: 'обычная', hard: 'хард', greed: 'greed', greedier: 'greedier' },
+  counterGoals: {
+    thimble: 'Игр сыграно у наперсточника',
+    dailyStreak: 'Дейлики подряд',
+    rubberCement: 'Rubber Cement взят',
+    beds: 'Сон в кровати',
+    batteryBum: 'Предмет от Battery Bum',
+  },
+  routeCounters: {
+    donation: 'Донат-машина',
+    greedDonation: 'Донат Greed',
+    dailies: 'Дейликов сыграно',
+    dailyStreak: 'Дейлики подряд',
+    thimble: 'Игр у наперсточника',
+    beds: 'Кровати',
+    bloodDonor: 'Донор крови',
+    arcades: 'Аркады',
+    bossRush: 'Boss Rush пройден',
+    devilDeals: 'Дьявольских сделок',
+    angelDeals: 'Ангельских сделок',
+    batteryBum: 'Battery Bum убит',
+  },
+  overlaySets: {
+    blind: 'Счетчики и секреты',
+    watch: 'Под наблюдением',
+    locked: 'Осталось',
+    progress: 'Счет',
+    marks: 'Марки',
+  },
+  thresholds: 'Пороги',
+  statistics: 'Статистика',
+  filters: { locked: 'Закрытые', all: 'Все', unlocked: 'Открытые' },
+  search: 'поиск',
+  empty: 'пусто',
+  countsToward: (n: number) => `в зачете ${n}`,
+  secrets: 'Секреты',
+  challenges: 'Челленджи',
+  items: 'Предметы',
+  marks: 'Марки',
+  marksNote: (hard: number, any: number, total: number) => `хард ${hard}/${total} · любые ${any}/${total}`,
+  character: 'Персонаж',
+  remaining: 'Остаток',
+  marksHard: 'Марки хард',
+  marksAny: 'Марки любые',
+  counters: 'Счетчики',
+  extras: 'Вне зачета',
+  watched: 'Под наблюдением',
+  unlockLog: 'Открылось',
+  kinds: { challenge: 'челлендж', item: 'предмет', mark: 'марка' },
+  counterN: (index: number) => `счетчик ${index}`,
+  overlayLink: 'Ссылка',
+  overlayLinkNote: 'источник «Браузер» в OBS',
+  copy: 'Копировать',
+  copied: 'Скопировано',
+  view: 'Вид',
+  iconSize: 'Иконка',
+  columns: 'Колонок',
+  auto: 'авто',
+  gap: 'Зазор',
+  scale: 'Масштаб',
+  iconLimit: 'Предел иконок',
+  none: 'нет',
+  numbers: 'Цифры',
+  backdrop: 'Подложка',
+  overlayLang: 'Язык оверлея',
+  preview: 'Предпросмотр',
+  overlayTitle: 'оверлей',
+  editions: {
+    'repentance-plus': 'Repentance+',
+    repentance: 'Repentance',
+    'afterbirth-plus': 'Afterbirth+',
+    unknown: 'неизвестное издание',
+  },
+  slot: (n: number) => `файл ${n}`,
+  unread: 'не прочитан',
+  source: 'Источник',
+  path: 'Путь',
+  lastRead: 'Чтение',
+  gameWrote: 'Запись игры',
+  snapshots: 'Снимков',
+  failure: 'Сбой',
+  pickFile: 'Выбрать файл',
+  reread: 'Перечитать',
+  refreshList: 'Обновить список',
+  revealInFolder: 'В папке',
+  watching: 'Отслеживается',
+  watch: 'Отслеживать',
+  noSaves: 'сейвы не найдены — укажи файл вручную',
+  failed: 'не вышло',
+  dialogFailed: 'диалог не открылся',
+  deadGod: 'dead god',
+  overlayNoFile: 'нет файла',
+  left: 'осталось',
+  overlaySub: (marks: string, challenges: string) => `марки ${marks} · челленджи ${challenges}`,
+  langToggle: 'EN',
+  langToggleTitle: 'Switch to English',
+  locale: 'ru-RU',
+};
+
+const DICTS: Record<Lang, Strings> = { en, ru };
+const STORAGE_KEY = 'tracker.lang';
+
+export function isLang(value: unknown): value is Lang {
+  return value === 'en' || value === 'ru';
+}
+
+function detect(): Lang {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (isLang(saved)) return saved;
+  } catch {
+    /* storage unavailable */
+  }
+  const candidates = navigator.languages?.length ? navigator.languages : [navigator.language];
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.toLowerCase().startsWith('ru')) return 'ru';
+  }
+  return 'en';
+}
+
+let current: Lang = detect();
+const listeners = new Set<() => void>();
+
+function apply(lang: Lang) {
+  current = lang;
+  document.documentElement.lang = lang;
+  for (const listener of listeners) listener();
+}
+
+apply(current);
+
+export function strings(lang: Lang): Strings {
+  return DICTS[lang];
+}
+
+export function setLang(lang: Lang) {
+  if (lang === current) return;
+  try {
+    localStorage.setItem(STORAGE_KEY, lang);
+  } catch {
+    /* storage unavailable */
+  }
+  apply(lang);
+}
+
+export function currentLang(): Lang {
+  return current;
+}
+
+export function langFromParams(search: string, fallback: Lang = current): Lang {
+  const value = new URLSearchParams(search).get('lang');
+  return isLang(value) ? value : fallback;
+}
+
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+export function useLang(): { lang: Lang; s: Strings; setLang: (lang: Lang) => void } {
+  const lang = useSyncExternalStore(subscribe, currentLang, () => 'en' as Lang);
+  return { lang, s: DICTS[lang], setLang };
+}
