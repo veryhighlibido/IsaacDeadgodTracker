@@ -15,10 +15,19 @@ items, the five threshold counters (thimble games, daily streak, Rubber Cement,
 beds, Battery Bum payouts), a feed of what unlocked while it was running, and
 the save file it is watching.
 
-**Overlay** — five view sets for a browser source in OBS: blind unlocks,
-watched secrets, what is left, the score, or the mark matrix. Icon size, column
-count, spacing, scale, numbers and backdrop are all adjustable, and the tab
-gives you the exact pixel size of the source.
+**Overlay** — five view sets for a browser source in OBS: counters and
+secrets, watched secrets, what is left, the score, or the mark matrix. Icon
+size, column count, spacing, scale, numbers and backdrop are all adjustable,
+and the tab gives you the exact pixel size of the source.
+
+Besides the five thresholds, the counters and secrets view can show how many
+achievements are unlocked (out of 641) and how many items you have touched.
+Any counter or secret can be switched off or moved, by dragging or with the
+arrows. The fine tuning block is optional: it adds a tile layout that puts
+everything in one grid with a set number of rows and the numbers beside the
+icons in the game font, and it lets you choose whether locked entries stay in
+colour or turn grey, and whether unlocked ones get a check mark, disappear or
+fade.
 
 ## Safety
 
@@ -42,7 +51,9 @@ Documents). Any other file can be picked by hand in the app.
 
 ## Overlay in OBS
 
-1. Open the overlay tab in the app and pick a view.
+1. Open the overlay tab in the app and pick a view. For counters and secrets,
+   tick what should be on screen in the list below and put it in order; open
+   Fine tuning if you want the tile layout or a different look.
 2. Pick the overlay language — the link carries its own `lang`, so the panel can
    stay in one language while the stream shows the other.
 3. Copy the link.
@@ -53,7 +64,7 @@ Documents). Any other file can be picked by hand in the app.
 
 ## Build it yourself
 
-Requirements: Windows, [Node.js](https://nodejs.org) 20+, a stable
+Requirements: Windows, [Node.js](https://nodejs.org) 22+, a stable
 [Rust](https://rustup.rs) toolchain with the MSVC target, and the Visual Studio
 Build Tools that rustup asks for.
 
@@ -75,7 +86,10 @@ cargo test --manifest-path src-tauri/Cargo.toml   # run npm run build first
 ```
 
 `dist/` must exist before the Rust side compiles, because the release binary
-embeds it.
+embeds it. `npm run build` also rewrites the PNGs in `dist/` without
+compression (`scripts/store-png.mjs`, pixels stay the same). The binary grows,
+but it no longer carries megabytes of compressed data, which ML-based
+antivirus engines tend to read as a packed payload.
 
 ## Where it keeps things
 

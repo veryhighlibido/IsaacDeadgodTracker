@@ -4,7 +4,6 @@ import { api, type SaveStatus } from './api';
 import { useLang, type Strings } from './i18n';
 import { clearRegression, useLive } from './live';
 import { derive } from './model';
-import type { OverlayConfig } from './overlay-config';
 import { Counters } from './views/Counters';
 import { Achievements, Challenges, Items } from './views/Lists';
 import { Marks } from './views/Marks';
@@ -46,15 +45,15 @@ export function App() {
   const [tab, setTabState] = useState<Tab>(() => tabFromHash() ?? 'overview');
   const [port, setPort] = useState<number | null>(null);
   const content = useRef<HTMLElement | null>(null);
-  const [overlayConfig, setOverlayConfig] = useState<OverlayConfig | null>(null);
+  const [overlayConfig, setOverlayConfig] = useState<unknown>(null);
 
   useEffect(() => {
     api
       .status()
       .then((response) => {
         setPort(response.port);
-        const saved = response.settings.overlay as OverlayConfig | null;
-        if (saved && typeof saved === 'object' && 'set' in saved) setOverlayConfig(saved);
+        const saved = response.settings.overlay;
+        if (saved && typeof saved === 'object') setOverlayConfig(saved);
       })
       .catch(() => undefined);
   }, []);
@@ -123,7 +122,7 @@ export function App() {
             {tab === 'marks' && <Marks derived={derived} />}
             {tab === 'challenges' && <Challenges save={live.parsed.save} derived={derived} />}
             {tab === 'items' && <Items save={live.parsed.save} derived={derived} />}
-            {tab === 'overlay' && <OverlaySetup port={port} saved={overlayConfig} />}
+            {tab === 'overlay' && <OverlaySetup port={port} saved={overlayConfig} onChange={setOverlayConfig} />}
             {tab === 'source' && <Source status={live.status} />}
           </>
         )}

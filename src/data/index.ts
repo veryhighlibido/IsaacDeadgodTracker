@@ -36,5 +36,6 @@ export const sprite = {
   achievement: (id: number) => `/gfx/achievements/${id}.png`,
   item: (id: number) => `/gfx/items/${String(id).padStart(3, '0')}.png`,
   character: (name: string) => `/gfx/characters/${name.replace(/ & /g, '_and_').replace(/ /g, '_')}.png`,
+  ui: (name: string) => `/gfx/ui/${name}.png`,
   mark: (name: string, layer: 'normal' | 'hard' | 'online_normal' | 'online_hard') => `/gfx/marks/${layer}/${enc(name)}.png`,
 };

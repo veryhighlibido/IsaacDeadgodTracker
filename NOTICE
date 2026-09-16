@@ -8,9 +8,13 @@ it does.
 --------------------------------------------------------------------------
 Game artwork — public/gfx/**
 --------------------------------------------------------------------------
-Achievement, item, character and completion-mark sprites from
+Achievement, item, pickup, character and completion-mark sprites from
 The Binding of Isaac: Rebirth and its expansions.
 Copyright (c) Nicalis, Inc. and Edmund McMillen.
+
+public/gfx/ui/trophy.png and public/gfx/ui/breakfast.png put the game's
+trophy pickup and the Breakfast item on the achievement paper background.
+public/gfx/ui/check.png is drawn for this project and is not game artwork.
 
 Used to identify in-game unlocks inside a companion tool. This project is an
 unofficial fan-made tool, is not affiliated with, endorsed by or sponsored by
@@ -39,8 +43,8 @@ IsaacUpheaval — public/fonts/IsaacUpheaval.woff2
 --------------------------------------------------------------------------
 The Binding of Isaac community variant of the Upheaval typeface by
 Brian Kent (Aenigma Fonts), circulated as freeware and used by fan tools for
-the series. Rights remain with the original author. Used here only for the
-wordmark.
+the series. Rights remain with the original author. Used here for the
+wordmark and, optionally, for the numbers in the overlay.
 
 --------------------------------------------------------------------------
 Dependencies

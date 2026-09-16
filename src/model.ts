@@ -1,6 +1,6 @@
 import { decodeMark, MARK_BOSSES, MARK_MATRIX, type MarkBoss } from './core/domain';
 import type { SaveData } from './core/format';
-import { ACHIEVEMENT_BY_ID, CHALLENGES, CHARACTERS, ITEMS } from './data';
+import { ACHIEVEMENT_BY_ID, ACHIEVEMENTS, CHALLENGES, CHARACTERS, ITEMS } from './data';
 import type { Strings } from './i18n';
 
 export const DEAD_GOD_ID = 637;
@@ -52,6 +52,7 @@ export interface MarkCell {
 
 export interface Derived {
   deadGod: Progress;
+  achievements: Progress;
   extras: Progress;
   challenges: Progress;
   items: Progress;
@@ -79,6 +80,8 @@ export function derive(save: SaveData): Derived {
   }
   let extras = 0;
   for (const id of EXTRA_ACHIEVEMENTS) if (achievements[id]) extras++;
+  let achievementsDone = 0;
+  for (const achievement of ACHIEVEMENTS) if (achievements[achievement.id]) achievementsDone++;
 
   const lockedChallenges: number[] = [];
   let challengesDone = 0;
@@ -108,6 +111,7 @@ export function derive(save: SaveData): Derived {
 
   return {
     deadGod: progress(unlocked, DEAD_GOD_LAST_REQUIRED),
+    achievements: progress(achievementsDone, ACHIEVEMENTS.length),
     extras: progress(extras, EXTRA_ACHIEVEMENTS.length),
     challenges: progress(challengesDone, CHALLENGES.length),
     items: progress(itemsSeen, ITEMS.length),
