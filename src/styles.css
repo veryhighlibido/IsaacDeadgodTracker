@@ -79,8 +79,16 @@ html[data-surface='overlay'] #root {
   overflow: hidden;
 }
 
-img {
+img[data-render='wait'] {
+  visibility: hidden;
+}
+
+img[data-render='pixel'] {
   image-rendering: pixelated;
+}
+
+img[data-render='sharp'] {
+  image-rendering: -webkit-optimize-contrast;
 }
 
 ::selection {

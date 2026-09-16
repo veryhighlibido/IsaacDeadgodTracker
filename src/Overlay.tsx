@@ -9,6 +9,7 @@ import { useLive } from './live';
 import { achievementName, characterName, derive, type Derived } from './model';
 import { isSecretKey, parseOverlayParams, type OverlayConfig } from './overlay-config';
 import { itemMeta, itemState } from './overlay-items';
+import { Sprite } from './sprite';
 import { Meter } from './ui';
 
 function Sprites({ ids, config }: { ids: number[]; config: OverlayConfig }) {
@@ -16,7 +17,7 @@ function Sprites({ ids, config }: { ids: number[]; config: OverlayConfig }) {
     <div className="ov-cells" style={cellColumns(config, ids.length)}>
       {ids.map((id) => (
         <div className="cell" key={id} data-on="1">
-          <img src={sprite.achievement(id)} alt="" draggable={false} title={achievementName(id)} />
+          <Sprite src={sprite.achievement(id)} alt="" draggable={false} title={achievementName(id)} />
         </div>
       ))}
     </div>
@@ -30,9 +31,9 @@ function Tile({ itemKey, derived, config, s, fresh }: TileProps) {
   return (
     <div className={fresh ? 'ov-tile fresh' : 'ov-tile'} data-done={state.done ? '1' : '0'}>
       <span className="ov-icon">
-        <img src={meta.icon} alt="" draggable={false} title={meta.name} />
+        <Sprite src={meta.icon} alt="" draggable={false} title={meta.name} />
         {state.done && config.done === 'check' ? (
-          <img className="ov-check" src={sprite.ui('check')} alt="" draggable={false} />
+          <Sprite className="ov-check" src={sprite.ui('check')} alt="" draggable={false} />
         ) : null}
       </span>
       {counter && (config.labels || config.meter) ? (
@@ -165,12 +166,12 @@ function MarksBlock({ derived, config }: { derived: Derived; config: OverlayConf
         {derived.marks.map((row, characterId) => (
           <tr key={characterId}>
             <th>
-              <img src={sprite.character(characterName(characterId))} alt="" />
+              <Sprite src={sprite.character(characterName(characterId))} alt="" />
             </th>
             {row.map((cell) => (
               <td key={cell.boss} data-level={cell.offline}>
                 {cell.offline > 0 ? (
-                  <img src={sprite.mark(MARK_IMAGE[cell.boss], cell.offline === 2 ? 'hard' : 'normal')} alt="" />
+                  <Sprite src={sprite.mark(MARK_IMAGE[cell.boss], cell.offline === 2 ? 'hard' : 'normal')} alt="" />
                 ) : (
                   <span className="void" />
                 )}
@@ -182,7 +183,7 @@ function MarksBlock({ derived, config }: { derived: Derived; config: OverlayConf
           <th />
           {MARK_BOSSES.map((boss) => (
             <td key={boss}>
-              <img src={sprite.mark(MARK_IMAGE[boss], 'hard')} alt="" />
+              <Sprite src={sprite.mark(MARK_IMAGE[boss], 'hard')} alt="" />
             </td>
           ))}
         </tr>

@@ -6,6 +6,7 @@ import { useLang, type Strings } from '../i18n';
 import { MARK_IMAGE } from '../labels';
 import type { LiveState } from '../live';
 import { achievementName, challengeName, characterName, type Derived } from '../model';
+import { Sprite } from '../sprite';
 import { Cell, Cells, Row, Rows, Sheet } from '../ui';
 
 const FRESH_MS = 8000;
@@ -82,7 +83,7 @@ export function Overview({ live, derived }: { live: LiveState; derived: Derived 
               key={goal.achievementId}
               label={
                 <span className="row-sprite">
-                  <img src={sprite.achievement(goal.achievementId)} alt="" />
+                  <Sprite src={sprite.achievement(goal.achievementId)} alt="" />
                   <b>{achievementName(goal.achievementId)}</b>
                   <i>{s.counterGoals[goal.title]}</i>
                 </span>
@@ -121,7 +122,7 @@ export function Overview({ live, derived }: { live: LiveState; derived: Derived 
                   <time>
                     {new Date(event.at).toLocaleTimeString(s.locale, { hour: '2-digit', minute: '2-digit' })}
                   </time>
-                  {line.icon ? <img src={line.icon} alt="" /> : <span />}
+                  {line.icon ? <Sprite src={line.icon} alt="" /> : <span />}
                   <span className="log-name">
                     {line.name}
                     {line.kind ? <span className="log-kind"> · {line.kind}</span> : null}

@@ -2,6 +2,7 @@ import type { SaveData } from '../core/format';
 import { sprite } from '../data';
 import { useLang } from '../i18n';
 import { achievementName, ROUTE_COUNTERS, type Derived } from '../model';
+import { Sprite } from '../sprite';
 import { Row, Rows, Sheet } from '../ui';
 
 export function Counters({ save, derived }: { save: SaveData; derived: Derived }) {
@@ -17,7 +18,7 @@ export function Counters({ save, derived }: { save: SaveData; derived: Derived }
                 key={goal.achievementId}
                 label={
                   <span className="row-sprite">
-                    <img src={sprite.achievement(goal.achievementId)} alt="" />
+                    <Sprite src={sprite.achievement(goal.achievementId)} alt="" />
                     <b>{achievementName(goal.achievementId)}</b>
                     <i>{s.counterGoals[goal.title]}</i>
                   </span>

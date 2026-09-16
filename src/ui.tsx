@@ -1,5 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 
+import { Sprite } from './sprite';
+
 export function Sheet({ title, note, children }: { title: string; note?: ReactNode; children: ReactNode }) {
   return (
     <section className="sheet">
@@ -96,7 +98,7 @@ export function Cell({
   const style = size ? ({ '--tile': `${size}px` } as CSSProperties) : undefined;
   return (
     <div className={fresh ? 'cell fresh' : 'cell'} data-on={on ? '1' : '0'} title={title} style={style}>
-      <img src={src} alt={title} loading="lazy" draggable={false} />
+      <Sprite src={src} alt={title} loading="lazy" draggable={false} />
     </div>
   );
 }

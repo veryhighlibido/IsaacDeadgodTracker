@@ -19,6 +19,7 @@ import {
   type OverlaySet,
 } from '../overlay-config';
 import { itemMeta } from '../overlay-items';
+import { Sprite } from '../sprite';
 import { Sheet } from '../ui';
 
 function Seg<T extends string>({
@@ -267,7 +268,7 @@ function Elements({
                   />
                   <label className="el-pick">
                     <input type="checkbox" checked={on} onChange={() => toggle(key)} />
-                    <img src={meta.icon} alt="" draggable={false} />
+                    <Sprite src={meta.icon} alt="" draggable={false} />
                     <span className="el-name">{meta.name}</span>
                     <span className="el-note">{meta.note}</span>
                   </label>

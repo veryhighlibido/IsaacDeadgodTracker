@@ -3,6 +3,7 @@ import { sprite } from '../data';
 import { useLang } from '../i18n';
 import { MARK_IMAGE, markLevelWord } from '../labels';
 import { characterName, type Derived } from '../model';
+import { Sprite } from '../sprite';
 import { Sheet } from '../ui';
 
 export function Marks({ derived }: { derived: Derived }) {
@@ -25,7 +26,7 @@ export function Marks({ derived }: { derived: Derived }) {
                 <th className="head-label">{s.character}</th>
                 {MARK_BOSSES.map((boss) => (
                   <th key={boss} title={MARK_IMAGE[boss]}>
-                    <img src={sprite.mark(MARK_IMAGE[boss], 'hard')} alt={MARK_IMAGE[boss]} />
+                    <Sprite src={sprite.mark(MARK_IMAGE[boss], 'hard')} alt={MARK_IMAGE[boss]} />
                   </th>
                 ))}
               </tr>
@@ -34,7 +35,7 @@ export function Marks({ derived }: { derived: Derived }) {
               {derived.marks.map((row, characterId) => (
                 <tr key={characterId}>
                   <th className="row-head">
-                    <img src={sprite.character(characterName(characterId))} alt="" />
+                    <Sprite src={sprite.character(characterName(characterId))} alt="" />
                     {characterName(characterId)}
                   </th>
                   {row.map((cell) => {
@@ -42,7 +43,7 @@ export function Marks({ derived }: { derived: Derived }) {
                     return (
                       <td key={cell.boss} data-level={level}>
                         {level > 0 ? (
-                          <img
+                          <Sprite
                             src={sprite.mark(MARK_IMAGE[cell.boss], level === 2 ? 'hard' : 'normal')}
                             alt=""
                             title={`${characterName(characterId)} · ${MARK_IMAGE[cell.boss]} · ${markLevelWord(cell.boss, level === 2 ? 2 : 1, s)}`}
