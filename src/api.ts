@@ -50,7 +50,7 @@ export interface StatusResponse {
   status: SaveStatus;
   port: number;
   sources: SourceInfo[];
-  settings: { savePath: string | null; port: number | null; ui: unknown; overlay: unknown };
+  settings: { savePath: string | null; port: number | null; ui: unknown; overlay: unknown; followSlot: boolean };
   version: string;
 }
 
@@ -71,7 +71,7 @@ export const api = {
   pick: (lang: string) => request<{ path: string | null }>(`/api/pick?lang=${lang}`, { method: 'POST' }),
   refresh: () => request<{ ok: true }>('/api/refresh', { method: 'POST' }),
   reveal: (path: string) => request<{ ok: true }>('/api/reveal', { method: 'POST', body: JSON.stringify({ path }) }),
-  saveSettings: (body: { ui?: unknown; overlay?: unknown }) =>
+  saveSettings: (body: { ui?: unknown; overlay?: unknown; followSlot?: boolean }) =>
     request<{ ok: true }>('/api/settings', { method: 'POST', body: JSON.stringify(body) }),
   preview: async (path: string): Promise<Uint8Array> => {
     const res = await fetch(`${API_BASE}/api/preview?path=${encodeURIComponent(path)}`);

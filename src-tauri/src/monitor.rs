@@ -35,6 +35,7 @@ pub struct Status {
 
 enum Cmd {
     SetTarget(Option<PathBuf>),
+    SetFollow(bool),
     Refresh,
 }
 
@@ -73,6 +74,35 @@ fn stat_of(path: &Path) -> Option<(u64, u64)> {
     Some((meta.len(), mtime))
 }
 
+fn slot_siblings(path: &Path) -> Vec<PathBuf> {
+    let Some(stem) = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .and_then(|name| name.strip_suffix(".dat"))
+    else {
+        return Vec::new();
+    };
+    let Some(slot) = stem.chars().last().filter(|c| matches!(c, '1'..='3')) else {
+        return Vec::new();
+    };
+    let base = &stem[..stem.len() - 1];
+    ['1', '2', '3']
+        .into_iter()
+        .filter(|&digit| digit != slot)
+        .map(|digit| path.with_file_name(format!("{base}{digit}.dat")))
+        .collect()
+}
+
+fn newer_slot(target: &Path, since: u64) -> Option<PathBuf> {
+    let floor = stat_of(target).map(|(_, mtime)| mtime).unwrap_or(0).max(since);
+    slot_siblings(target)
+        .into_iter()
+        .filter_map(|path| stat_of(&path).map(|(_, mtime)| (mtime, path)))
+        .filter(|(mtime, _)| *mtime > floor)
+        .max_by_key(|(mtime, _)| *mtime)
+        .map(|(_, path)| path)
+}
+
 fn frame(header: String, body: &[u8]) -> Arc<Vec<u8>> {
     let head = header.as_bytes();
     let mut out = Vec::with_capacity(4 + head.len() + body.len());
@@ -83,7 +113,7 @@ fn frame(header: String, body: &[u8]) -> Arc<Vec<u8>> {
 }
 
 impl Monitor {
-    pub fn start(initial: Option<PathBuf>) -> Arc<Monitor> {
+    pub fn start(initial: Option<PathBuf>, follow: bool) -> Arc<Monitor> {
         let (tx, _) = broadcast::channel(16);
         let (cmd_tx, cmd_rx) = channel::<Ev>();
         let monitor = Arc::new(Monitor {
@@ -98,7 +128,7 @@ impl Monitor {
         let worker = Arc::clone(&monitor);
         std::thread::Builder::new()
             .name("save-monitor".into())
-            .spawn(move || worker.run(cmd_rx, cmd_tx, initial))
+            .spawn(move || worker.run(cmd_rx, cmd_tx, initial, follow))
             .expect("spawn save monitor");
         monitor
     }
@@ -123,6 +153,10 @@ impl Monitor {
         let _ = self.cmd.send(Ev::Cmd(Cmd::Refresh));
     }
 
+    pub fn set_follow(&self, follow: bool) {
+        let _ = self.cmd.send(Ev::Cmd(Cmd::SetFollow(follow)));
+    }
+
     fn publish_status(&self, status: Status) {
         let changed = {
             let mut shared = self.shared.lock().unwrap();
@@ -139,7 +173,7 @@ impl Monitor {
         }
     }
 
-    fn run(self: Arc<Self>, rx: Receiver<Ev>, ev_tx: Sender<Ev>, initial: Option<PathBuf>) {
+    fn run(self: Arc<Self>, rx: Receiver<Ev>, ev_tx: Sender<Ev>, initial: Option<PathBuf>, follow: bool) {
         let fs_tx = ev_tx.clone();
         let mut watcher: Option<RecommendedWatcher> = match notify::recommended_watcher(
             move |res: notify::Result<notify::Event>| {
@@ -155,9 +189,12 @@ impl Monitor {
         let mut target: Option<PathBuf> = None;
         let mut watched_dir: Option<PathBuf> = None;
         let mut last_stat: Option<(u64, u64)> = None;
+        let mut follow = follow;
+        let mut since: u64 = 0;
 
         if initial.is_some() {
             self.apply_target(&mut target, &mut watched_dir, &mut watcher, initial);
+            self.follow_slot(follow, &mut since, &mut target, &mut watched_dir, &mut watcher);
             last_stat = None;
             self.check(&target, &mut last_stat, true);
         }
@@ -167,8 +204,17 @@ impl Monitor {
             match event {
                 Ok(Ev::Cmd(Cmd::SetTarget(path))) => {
                     self.apply_target(&mut target, &mut watched_dir, &mut watcher, path);
+                    since = now_ms();
                     last_stat = None;
                     self.check(&target, &mut last_stat, true);
+                }
+                Ok(Ev::Cmd(Cmd::SetFollow(next))) => {
+                    follow = next;
+                    since = 0;
+                    if self.follow_slot(follow, &mut since, &mut target, &mut watched_dir, &mut watcher) {
+                        last_stat = None;
+                        self.check(&target, &mut last_stat, true);
+                    }
                 }
                 Ok(Ev::Cmd(Cmd::Refresh)) => {
                     last_stat = None;
@@ -180,7 +226,12 @@ impl Monitor {
                         match extra {
                             Ev::Cmd(Cmd::SetTarget(path)) => {
                                 self.apply_target(&mut target, &mut watched_dir, &mut watcher, path);
+                                since = now_ms();
                                 last_stat = None;
+                            }
+                            Ev::Cmd(Cmd::SetFollow(next)) => {
+                                follow = next;
+                                since = 0;
                             }
                             Ev::Cmd(Cmd::Refresh) => last_stat = None,
                             Ev::Fs => {}
@@ -189,12 +240,39 @@ impl Monitor {
                             break;
                         }
                     }
+                    if self.follow_slot(follow, &mut since, &mut target, &mut watched_dir, &mut watcher) {
+                        last_stat = None;
+                    }
                     self.check(&target, &mut last_stat, true);
                 }
-                Err(RecvTimeoutError::Timeout) => self.check(&target, &mut last_stat, false),
+                Err(RecvTimeoutError::Timeout) => {
+                    if self.follow_slot(follow, &mut since, &mut target, &mut watched_dir, &mut watcher) {
+                        last_stat = None;
+                    }
+                    self.check(&target, &mut last_stat, false);
+                }
                 Err(RecvTimeoutError::Disconnected) => break,
             }
         }
+    }
+
+    fn follow_slot(
+        &self,
+        follow: bool,
+        since: &mut u64,
+        target: &mut Option<PathBuf>,
+        watched_dir: &mut Option<PathBuf>,
+        watcher: &mut Option<RecommendedWatcher>,
+    ) -> bool {
+        if !follow {
+            return false;
+        }
+        let Some(next) = target.as_deref().and_then(|path| newer_slot(path, *since)) else {
+            return false;
+        };
+        self.apply_target(target, watched_dir, watcher, Some(next));
+        *since = 0;
+        true
     }
 
     fn apply_target(
@@ -299,5 +377,59 @@ impl Monitor {
                 self.publish_status(status);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{newer_slot, slot_siblings};
+    use std::path::{Path, PathBuf};
+    use std::time::{Duration, SystemTime};
+
+    #[test]
+    fn finds_sibling_slots_with_any_prefix() {
+        assert_eq!(
+            slot_siblings(Path::new("C:/remote/rep+persistentgamedata1.dat")),
+            vec![
+                PathBuf::from("C:/remote/rep+persistentgamedata2.dat"),
+                PathBuf::from("C:/remote/rep+persistentgamedata3.dat"),
+            ]
+        );
+        assert_eq!(
+            slot_siblings(Path::new("C:/docs/persistentgamedata3.dat")),
+            vec![
+                PathBuf::from("C:/docs/persistentgamedata1.dat"),
+                PathBuf::from("C:/docs/persistentgamedata2.dat"),
+            ]
+        );
+        assert!(slot_siblings(Path::new("C:/docs/persistentgamedata4.dat")).is_empty());
+        assert!(slot_siblings(Path::new("C:/docs/notes.txt")).is_empty());
+    }
+
+    #[test]
+    fn switches_only_to_a_slot_written_later() {
+        let dir = std::env::temp_dir().join(format!("tracker-slots-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let base = SystemTime::now() - Duration::from_secs(600);
+        let touch = |slot: u8, age: u64| {
+            let path = dir.join(format!("rep+persistentgamedata{slot}.dat"));
+            let file = std::fs::File::create(&path).unwrap();
+            file.set_modified(base + Duration::from_secs(age)).unwrap();
+            path
+        };
+        let one = touch(1, 100);
+        touch(2, 50);
+        assert_eq!(newer_slot(&one, 0), None);
+        let three = touch(3, 200);
+        assert_eq!(newer_slot(&one, 0), Some(three.clone()));
+        let pick_time = (base + Duration::from_secs(300))
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64;
+        assert_eq!(newer_slot(&one, pick_time), None);
+        let two = touch(2, 400);
+        assert_eq!(newer_slot(&one, pick_time), Some(two));
+        assert_eq!(newer_slot(&three, 0), Some(dir.join("rep+persistentgamedata2.dat")));
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }

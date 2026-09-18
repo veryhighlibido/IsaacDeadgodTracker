@@ -7,6 +7,14 @@ export const DEAD_GOD_ID = 637;
 export const DEAD_GOD_LAST_REQUIRED = 636;
 export const EXTRA_ACHIEVEMENTS = [638, 639, 640, 641];
 
+export const HIDDEN_ITEMS: Array<{ id: number; title: keyof Strings['hiddenItems'] }> = [
+  { id: 43, title: 'pill' },
+  { id: 61, title: 'card' },
+  { id: 656, title: 'damocles' },
+];
+
+export const ITEMS_TOTAL = ITEMS.length + HIDDEN_ITEMS.length;
+
 export interface CounterGoal {
   achievementId: number;
   counterIndex: number;
@@ -16,18 +24,25 @@ export interface CounterGoal {
 
 export const COUNTER_GOALS: CounterGoal[] = [
   { achievementId: 64, counterIndex: 14, goal: 100, title: 'thimble' },
-  { achievementId: 354, counterIndex: 192, goal: 7, title: 'dailyStreak' },
+  { achievementId: 354, counterIndex: 193, goal: 7, title: 'dailiesWon' },
   { achievementId: 382, counterIndex: 201, goal: 5, title: 'rubberCement' },
   { achievementId: 385, counterIndex: 202, goal: 10, title: 'beds' },
   { achievementId: 523, counterIndex: 495, goal: 5, title: 'batteryBum' },
+  { achievementId: 336, counterIndex: 192, goal: 5, title: 'dailyStreak' },
 ];
 
 export const WATCHED_ACHIEVEMENTS = [23, 24, 25, 19, 27, 82, 258, 324, 337, 361, 366, 378, 384, 386, 406];
+
+export const OPTIONAL_ACHIEVEMENTS = [
+  65, 1, 147, 389, 36, 148, 326, 330, 545, 377, 327, 138, 12, 34, 57, 66, 78, 155, 407, 408, 409, 410, 276, 547, 583,
+  635, 636, 637,
+];
 
 export const ROUTE_COUNTERS: Array<{ index: number; title: keyof Strings['routeCounters'] }> = [
   { index: 20, title: 'donation' },
   { index: 115, title: 'greedDonation' },
   { index: 190, title: 'dailies' },
+  { index: 193, title: 'dailiesWon' },
   { index: 192, title: 'dailyStreak' },
   { index: 14, title: 'thimble' },
   { index: 202, title: 'beds' },
@@ -56,12 +71,14 @@ export interface Derived {
   extras: Progress;
   challenges: Progress;
   items: Progress;
+  hiddenItems: Array<{ id: number; title: keyof Strings['hiddenItems']; seen: boolean }>;
   marksHard: Progress;
   marksAny: Progress;
   lockedAchievements: number[];
   lockedChallenges: number[];
   counterGoals: Array<CounterGoal & { value: number; unlocked: boolean }>;
   watched: Array<{ id: number; unlocked: boolean }>;
+  optional: Array<{ id: number; unlocked: boolean }>;
   marks: MarkCell[][];
   isDeadGod: boolean;
 }
@@ -92,6 +109,8 @@ export function derive(save: SaveData): Derived {
 
   let itemsSeen = 0;
   for (const item of ITEMS) if (save.collectibles[item.id]) itemsSeen++;
+  const hiddenItems = HIDDEN_ITEMS.map((item) => ({ ...item, seen: save.collectibles[item.id] === 1 }));
+  for (const item of hiddenItems) if (item.seen) itemsSeen++;
 
   const marks: MarkCell[][] = [];
   let hard = 0;
@@ -114,7 +133,8 @@ export function derive(save: SaveData): Derived {
     achievements: progress(achievementsDone, ACHIEVEMENTS.length),
     extras: progress(extras, EXTRA_ACHIEVEMENTS.length),
     challenges: progress(challengesDone, CHALLENGES.length),
-    items: progress(itemsSeen, ITEMS.length),
+    items: progress(itemsSeen, ITEMS_TOTAL),
+    hiddenItems,
     marksHard: progress(hard, markTotal),
     marksAny: progress(any, markTotal),
     lockedAchievements,
@@ -125,6 +145,7 @@ export function derive(save: SaveData): Derived {
       unlocked: achievements[goal.achievementId] === 1,
     })),
     watched: WATCHED_ACHIEVEMENTS.map((id) => ({ id, unlocked: achievements[id] === 1 })),
+    optional: OPTIONAL_ACHIEVEMENTS.map((id) => ({ id, unlocked: achievements[id] === 1 })),
     marks,
     isDeadGod: achievements[DEAD_GOD_ID] === 1,
   };

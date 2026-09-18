@@ -636,6 +636,23 @@ img[data-render='sharp'] {
   padding: 18px 0 2px;
 }
 
+.follow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--dim);
+  cursor: pointer;
+}
+
+.follow:hover {
+  color: var(--bone);
+}
+
 .toolbar-right {
   margin-left: auto;
   font-family: var(--mono);
@@ -714,6 +731,7 @@ input[type='search']::placeholder {
 
 input[type='range'] {
   accent-color: var(--gold);
+  color: var(--dim);
   width: 100%;
 }
 
@@ -755,6 +773,50 @@ input[type='color'] {
   font-family: var(--mono);
   font-size: 12px;
   color: var(--dimmer);
+}
+
+.hidden-items {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+  font-size: 12px;
+  color: var(--dim);
+}
+
+.hidden-items p {
+  margin: 0 0 8px;
+  max-width: 72ch;
+}
+
+.hidden-items ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hidden-items li {
+  display: grid;
+  grid-template-columns: 4ch minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+  color: var(--dimmer);
+}
+
+.hidden-items b {
+  font-family: var(--mono);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.hidden-items li[data-on='1'] {
+  color: var(--bone);
+}
+
+.hidden-items li[data-on='1'] b {
+  color: var(--gold);
 }
 
 /* ── источник и оверлей ────────────────────────────────────── */
@@ -861,6 +923,28 @@ input[type='color'] {
   overflow-wrap: anywhere;
 }
 
+.share-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding-top: 14px;
+}
+
+.share-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.share-state {
+  padding-top: 8px;
+  font-size: 12px;
+  color: var(--gold);
+}
+
+.share-state[data-state='invalid'] {
+  color: var(--cinnabar);
+}
+
 .picks {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -904,6 +988,7 @@ input[type='color'] {
 
 .knob {
   display: grid;
+  align-content: start;
   gap: 5px;
   font-size: 11px;
   font-weight: 500;
@@ -925,6 +1010,18 @@ input[type='color'] {
   display: flex;
   justify-content: space-between;
   gap: 8px;
+}
+
+.knob em[data-clean='1'] {
+  color: var(--gold);
+}
+
+.knob-note {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--dimmer);
 }
 
 .knob.switch {
@@ -1119,6 +1216,56 @@ input[type='color'] {
   color: var(--dimmer);
 }
 
+.el-list[data-cap='1'] .el {
+  grid-template-columns: 22px minmax(0, 1fr) 32px auto;
+}
+
+.el-list[data-cap='1'] .el-move {
+  grid-column: 4;
+}
+
+.el-cap {
+  grid-column: 3;
+  justify-self: center;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--rule);
+  background: none;
+  color: var(--dimmer);
+  cursor: pointer;
+}
+
+.el-cap i {
+  width: 12px;
+  height: 9px;
+  background:
+    linear-gradient(currentColor, currentColor) left top / 7px 3px no-repeat,
+    linear-gradient(currentColor, currentColor) left bottom / 12px 3px no-repeat;
+}
+
+.el-cap[data-on='1'] {
+  border-color: var(--rule-strong);
+  background: var(--rule);
+  color: var(--bone);
+}
+
+.el-cap:hover:not(:disabled) {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.el-cap:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.el[data-on='0'] .el-cap {
+  opacity: 0.45;
+}
+
 .el-move {
   display: flex;
 }
@@ -1184,7 +1331,7 @@ input[type='color'] {
 .ov-counters {
   display: flex;
   gap: 14px;
-  align-items: flex-end;
+  align-items: flex-start;
 }
 
 .ov-cells {
@@ -1199,12 +1346,18 @@ input[type='color'] {
   margin-top: 10px;
 }
 
+.ov-split {
+  display: flex;
+  align-items: start;
+  gap: calc(var(--gap) + var(--tile) * 0.3);
+}
+
 .ov-grid {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: max-content;
   gap: var(--gap);
-  align-items: center;
+  align-items: start;
   justify-items: start;
 }
 
@@ -1284,10 +1437,6 @@ input[type='color'] {
   font-size: calc(var(--tile) * 0.3);
 }
 
-.ov-tile[data-done='1'] .ov-num b {
-  color: var(--gold);
-}
-
 .ov-cap .meter {
   width: var(--tile);
   height: 4px;
@@ -1319,10 +1468,6 @@ input[type='color'] {
   font-size: calc(var(--tile) * 0.5);
   font-weight: 400;
   color: inherit;
-}
-
-.overlay[data-font='game'] .ov-tile[data-done='1'] .ov-num {
-  color: var(--gold);
 }
 
 .ov-line {

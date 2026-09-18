@@ -67,6 +67,27 @@ function watchBox(target: Element, onSize: (size: Size) => void): () => void {
   };
 }
 
+let renderScale = 1;
+const scaleWatchers = new Set<() => void>();
+
+export function setRenderScale(value: number) {
+  const next = Number.isFinite(value) && value > 0 ? value : 1;
+  if (next === renderScale) return;
+  renderScale = next;
+  for (const notify of scaleWatchers) notify();
+}
+
+function watchScale(notify: () => void): () => void {
+  scaleWatchers.add(notify);
+  return () => {
+    scaleWatchers.delete(notify);
+  };
+}
+
+function readScale(): number {
+  return renderScale;
+}
+
 const upscales = new Map<string, Upscale>();
 const queue: Array<() => Promise<void>> = [];
 let drainPending = false;
@@ -200,8 +221,9 @@ export function Sprite({
     }
   }, [src]);
 
+  const extra = useSyncExternalStore(watchScale, readScale);
   const known = natural?.src === src ? natural : null;
-  const scale = box && known ? Math.min(box.width / known.width, box.height / known.height) : null;
+  const scale = box && known ? Math.min(box.width / known.width, box.height / known.height) * extra : null;
   const factor = scale === null ? 0 : factorOf(scale);
   const upscaled = useUpscale(src, factor);
   const look =

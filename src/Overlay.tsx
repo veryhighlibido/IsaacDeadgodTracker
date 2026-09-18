@@ -7,9 +7,9 @@ import { currentLang, langFromParams, strings, type Strings } from './i18n';
 import { MARK_IMAGE } from './labels';
 import { useLive } from './live';
 import { achievementName, characterName, derive, type Derived } from './model';
-import { isSecretKey, parseOverlayParams, type OverlayConfig } from './overlay-config';
+import { isSecretKey, isTotalKey, parseOverlayParams, type OverlayConfig } from './overlay-config';
 import { itemMeta, itemState } from './overlay-items';
-import { Sprite } from './sprite';
+import { setRenderScale, Sprite } from './sprite';
 import { Meter } from './ui';
 
 function Sprites({ ids, config }: { ids: number[]; config: OverlayConfig }) {
@@ -24,10 +24,10 @@ function Sprites({ ids, config }: { ids: number[]; config: OverlayConfig }) {
   );
 }
 
-function Tile({ itemKey, derived, config, s, fresh }: TileProps) {
+function Tile({ itemKey, derived, config, s, bare, fresh }: TileProps) {
   const meta = itemMeta(itemKey, s);
   const state = itemState(itemKey, derived);
-  const counter = state.goal !== undefined;
+  const counter = state.goal !== undefined && !bare && !state.done;
   return (
     <div className={fresh ? 'ov-tile fresh' : 'ov-tile'} data-done={state.done ? '1' : '0'}>
       <span className="ov-icon">
@@ -56,6 +56,7 @@ interface TileProps {
   derived: Derived;
   config: OverlayConfig;
   s: Strings;
+  bare: boolean;
   fresh?: boolean;
 }
 
@@ -77,6 +78,7 @@ function Tiles({
   style?: CSSProperties;
 }) {
   if (keys.length === 0) return null;
+  const bare = new Set(config.bare);
   return (
     <div className={className} style={style}>
       {keys.map((key) => (
@@ -86,6 +88,7 @@ function Tiles({
           derived={derived}
           config={config}
           s={s}
+          bare={bare.has(key)}
           fresh={isSecretKey(key) && fresh.has(Number(key.slice(1)))}
         />
       ))}
@@ -103,6 +106,10 @@ function visibleKeys(config: OverlayConfig, derived: Derived, secretsOnly: boole
   );
 }
 
+function gridRows(config: OverlayConfig, count: number): CSSProperties {
+  return { gridTemplateRows: `repeat(${Math.max(1, Math.min(config.rows, count))}, auto)` };
+}
+
 function cellColumns(config: OverlayConfig, count: number): CSSProperties {
   const columns = config.columns > 0 ? config.columns : Math.max(1, Math.min(count, 10));
   return { gridTemplateColumns: `repeat(${columns}, var(--tile))` };
@@ -111,17 +118,29 @@ function cellColumns(config: OverlayConfig, count: number): CSSProperties {
 function Blind({ derived, config, s, fresh }: { derived: Derived; config: OverlayConfig; s: Strings; fresh: Set<number> }) {
   const keys = visibleKeys(config, derived, false);
   if (config.layout === 'tiles') {
-    const rows = Math.max(1, Math.min(config.rows, keys.length));
+    const totals = config.apart ? keys.filter(isTotalKey) : [];
+    const main = config.apart ? keys.filter((key) => !isTotalKey(key)) : keys;
     return (
-      <Tiles
-        keys={keys}
-        derived={derived}
-        config={config}
-        s={s}
-        fresh={fresh}
-        className="ov-grid"
-        style={{ gridTemplateRows: `repeat(${rows}, auto)` }}
-      />
+      <div className="ov-split">
+        <Tiles
+          keys={main}
+          derived={derived}
+          config={config}
+          s={s}
+          fresh={fresh}
+          className="ov-grid"
+          style={gridRows(config, main.length)}
+        />
+        <Tiles
+          keys={totals}
+          derived={derived}
+          config={config}
+          s={s}
+          fresh={fresh}
+          className="ov-grid"
+          style={gridRows(config, totals.length)}
+        />
+      </div>
     );
   }
   const counters = keys.filter((key) => !isSecretKey(key));
@@ -192,6 +211,21 @@ function MarksBlock({ derived, config }: { derived: Derived; config: OverlayConf
   );
 }
 
+function useParentFit() {
+  useEffect(() => {
+    if (window.parent === window) return;
+    const onMessage = (event: MessageEvent) => {
+      const data = event.data as { type?: string; fit?: number };
+      if (data?.type === 'overlay-fit' && typeof data.fit === 'number') setRenderScale(data.fit);
+    };
+    window.addEventListener('message', onMessage);
+    return () => {
+      window.removeEventListener('message', onMessage);
+      setRenderScale(1);
+    };
+  }, []);
+}
+
 function useReportSize(node: HTMLDivElement | null) {
   useEffect(() => {
     if (!node || window.parent === window) return;
@@ -230,6 +264,7 @@ export function Overlay() {
     document.documentElement.lang = config.lang;
   }, [config.lang]);
 
+  useParentFit();
   useReportSize(root);
 
   const style = {

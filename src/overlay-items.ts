@@ -1,6 +1,6 @@
-import { ACHIEVEMENTS, ITEMS, sprite } from './data';
+import { ACHIEVEMENTS, sprite } from './data';
 import type { Strings } from './i18n';
-import { achievementName, COUNTER_GOALS, type Derived } from './model';
+import { achievementName, COUNTER_GOALS, ITEMS_TOTAL, type Derived } from './model';
 
 export interface ItemMeta {
   icon: string;
@@ -26,7 +26,7 @@ export function itemMeta(key: string, s: Strings): ItemMeta {
     return { icon: sprite.ui('trophy'), name: s.totals.ach, note: s.goalOf(ACHIEVEMENTS.length), secret: false };
   }
   if (key === 'items') {
-    return { icon: sprite.ui('breakfast'), name: s.totals.items, note: s.goalOf(ITEMS.length), secret: false };
+    return { icon: sprite.ui('breakfast'), name: s.totals.items, note: s.goalOf(ITEMS_TOTAL), secret: false };
   }
   const goal = GOAL_BY_KEY.get(key);
   if (goal) {
@@ -55,5 +55,6 @@ export function itemState(key: string, derived: Derived): ItemState {
     };
   }
   const id = idOf(key);
-  return { done: derived.watched.some((item) => item.id === id && item.unlocked) };
+  const tracked = derived.watched.find((item) => item.id === id) ?? derived.optional.find((item) => item.id === id);
+  return { done: tracked?.unlocked ?? false };
 }

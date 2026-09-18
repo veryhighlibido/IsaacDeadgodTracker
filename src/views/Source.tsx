@@ -102,6 +102,19 @@ export function Source({ status }: { status: SaveStatus | null }) {
   const [version, setVersion] = useState(0);
   const [busy, setBusy] = useState(false);
   const [fault, setFault] = useState<string | null>(null);
+  const [follow, setFollow] = useState(false);
+
+  useEffect(() => {
+    api
+      .status()
+      .then((response) => setFollow(response.settings.followSlot === true))
+      .catch(() => undefined);
+  }, []);
+
+  const changeFollow = (next: boolean) => {
+    setFollow(next);
+    api.saveSettings({ followSlot: next }).catch(() => setFollow(!next));
+  };
 
   useEffect(() => {
     api
@@ -172,6 +185,10 @@ export function Source({ status }: { status: SaveStatus | null }) {
               {s.revealInFolder}
             </button>
           ) : null}
+          <label className="follow" title={s.followSlotHint}>
+            <input type="checkbox" checked={follow} onChange={(event) => changeFollow(event.target.checked)} />
+            {s.followSlot}
+          </label>
         </div>
         {fault ? <div className="fault-line">{fault}</div> : null}
       </Sheet>

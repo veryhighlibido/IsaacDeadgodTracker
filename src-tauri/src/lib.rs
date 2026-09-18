@@ -34,7 +34,7 @@ pub fn run() {
                 .as_ref()
                 .map(PathBuf::from)
                 .filter(|path| path.is_file());
-            let monitor = monitor::Monitor::start(initial);
+            let monitor = monitor::Monitor::start(initial, config.follow_slot);
 
             let port_hint = config.port.unwrap_or(settings::DEFAULT_PORT);
             let (listener, port) = tauri::async_runtime::block_on(server::bind(port_hint))?;
@@ -66,6 +66,7 @@ pub fn run() {
                 .title("Isaac Deadgod Tracker")
                 .inner_size(1280.0, 820.0)
                 .min_inner_size(820.0, 560.0)
+                .disable_drag_drop_handler()
                 .center()
                 .build()?;
 

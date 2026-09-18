@@ -1,5 +1,5 @@
 import { isLang, type Lang, type Strings } from './i18n';
-import { COUNTER_GOALS, WATCHED_ACHIEVEMENTS } from './model';
+import { COUNTER_GOALS, OPTIONAL_ACHIEVEMENTS, WATCHED_ACHIEVEMENTS } from './model';
 
 export type OverlaySet = 'blind' | 'watch' | 'locked' | 'progress' | 'marks';
 export type OverlayLayout = 'classic' | 'tiles';
@@ -25,8 +25,11 @@ export interface OverlayConfig {
   locked: LockedLook;
   done: DoneLook;
   meter: boolean;
+  apart: boolean;
   order: string[];
   off: string[];
+  bare: string[];
+  version: number;
 }
 
 export const OVERLAY_SETS: Array<{ id: OverlaySet; label: keyof Strings['overlaySets'] }> = [
@@ -47,14 +50,29 @@ export const TOTAL_KEYS = ['ach', 'items'] as const;
 export type TotalKey = (typeof TOTAL_KEYS)[number];
 
 export const COUNTER_KEYS = [...COUNTER_GOALS.map((goal) => `c${goal.achievementId}`), ...TOTAL_KEYS];
-export const SECRET_KEYS = WATCHED_ACHIEVEMENTS.map((id) => `s${id}`);
+export const OPTIONAL_KEYS = OPTIONAL_ACHIEVEMENTS.map((id) => `s${id}`);
+export const SECRET_KEYS = [...WATCHED_ACHIEVEMENTS.map((id) => `s${id}`), ...OPTIONAL_KEYS];
+const OVERLAY_VERSION = 2;
 export const DEFAULT_ORDER = [...COUNTER_KEYS, ...SECRET_KEYS];
 
 const KNOWN_KEYS = new Set(DEFAULT_ORDER);
 const SECRET_KEY_SET = new Set(SECRET_KEYS);
+const TOTAL_KEY_SET = new Set<string>(TOTAL_KEYS);
 
 export function isSecretKey(key: string): boolean {
   return SECRET_KEY_SET.has(key);
+}
+
+export function isTotalKey(key: string): boolean {
+  return TOTAL_KEY_SET.has(key);
+}
+
+export function spriteSize(set: OverlaySet): number {
+  return set === 'marks' ? 16 : 64;
+}
+
+export function sizeTicks(set: OverlaySet): number[] {
+  return set === 'marks' ? [16, 32, 48, 64, 80, 96] : [32, 64];
 }
 
 export const LAYOUT_PRESETS: Record<OverlayLayout, Pick<OverlayConfig, 'caption' | 'font' | 'meter'>> = {
@@ -76,8 +94,11 @@ export const DEFAULT_OVERLAY: Omit<OverlayConfig, 'lang'> = {
   ...LAYOUT_PRESETS.classic,
   locked: 'color',
   done: 'check',
+  apart: true,
   order: DEFAULT_ORDER,
-  off: [],
+  off: OPTIONAL_KEYS,
+  bare: [],
+  version: OVERLAY_VERSION,
 };
 
 function num(value: unknown, fallback: number, min: number, max: number, round = false): number {
@@ -131,8 +152,11 @@ export function normalizeOverlay(raw: unknown, lang: Lang): OverlayConfig {
     locked: pick(source.locked, LOCKED_LOOKS, d.locked),
     done: pick(source.done, DONE_LOOKS, d.done),
     meter: bool(source.meter, d.meter),
+    apart: bool(source.apart, d.apart),
     order: normalizeOrder(source.order),
-    off: keys(source.off),
+    off: Number(source.version) === OVERLAY_VERSION ? keys(source.off) : keys([...keys(source.off), ...OPTIONAL_KEYS]),
+    bare: keys(source.bare),
+    version: OVERLAY_VERSION,
   };
 }
 
@@ -156,8 +180,11 @@ export function parseOverlayParams(search: string, lang: Lang): OverlayConfig {
       locked: params.get('locked'),
       done: params.get('done'),
       meter: params.get('meter'),
+      apart: params.get('apart'),
       order: params.get('order'),
       off: params.get('off'),
+      bare: params.get('bare'),
+      version: params.get('v'),
     },
     lang,
   );
@@ -185,7 +212,45 @@ export function overlayQuery(config: OverlayConfig): string {
   params.set('locked', config.locked);
   params.set('done', config.done);
   params.set('meter', config.meter ? '1' : '0');
+  params.set('apart', config.apart ? '1' : '0');
   if (!sameOrder(config.order)) params.set('order', config.order.join(','));
   if (config.off.length > 0) params.set('off', config.off.join(','));
+  if (config.bare.length > 0) params.set('bare', config.bare.join(','));
+  params.set('v', String(config.version));
   return params.toString().replace(/%2C/g, ',');
+}
+
+const CODE_PREFIX = 'IDT1.';
+
+async function transform(bytes: Uint8Array<ArrayBuffer>, stream: CompressionStream | DecompressionStream) {
+  const output = new Response(new Blob([bytes]).stream().pipeThrough(stream));
+  return new Uint8Array(await output.arrayBuffer());
+}
+
+function toBase64Url(bytes: Uint8Array): string {
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function fromBase64Url(text: string): Uint8Array<ArrayBuffer> {
+  const base64 = text.replace(/-/g, '+').replace(/_/g, '/');
+  const binary = atob(base64 + '='.repeat((4 - (base64.length % 4)) % 4));
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+}
+
+export async function encodeOverlayCode(config: OverlayConfig): Promise<string> {
+  const packed = await transform(new TextEncoder().encode(overlayQuery(config)), new CompressionStream('deflate-raw'));
+  return CODE_PREFIX + toBase64Url(packed);
+}
+
+export async function decodeOverlayCode(code: string, lang: Lang): Promise<OverlayConfig | null> {
+  const clean = code.replace(/\s+/g, '');
+  if (!clean.startsWith(CODE_PREFIX)) return null;
+  try {
+    const raw = await transform(fromBase64Url(clean.slice(CODE_PREFIX.length)), new DecompressionStream('deflate-raw'));
+    return parseOverlayParams(new TextDecoder().decode(raw), lang);
+  } catch {
+    return null;
+  }
 }

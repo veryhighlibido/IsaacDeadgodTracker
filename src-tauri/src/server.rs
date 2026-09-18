@@ -267,9 +267,11 @@ async fn refresh(State(state): State<AppState>) -> Json<serde_json::Value> {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct SettingsBody {
     ui: Option<serde_json::Value>,
     overlay: Option<serde_json::Value>,
+    follow_slot: Option<bool>,
 }
 
 async fn put_settings(State(state): State<AppState>, Json(body): Json<SettingsBody>) -> Json<serde_json::Value> {
@@ -279,6 +281,10 @@ async fn put_settings(State(state): State<AppState>, Json(body): Json<SettingsBo
     }
     if let Some(overlay) = body.overlay {
         settings.overlay = overlay;
+    }
+    if let Some(follow) = body.follow_slot {
+        settings.follow_slot = follow;
+        state.monitor.set_follow(follow);
     }
     settings::store(&settings);
     Json(json!({ "ok": true }))

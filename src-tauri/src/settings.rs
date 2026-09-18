@@ -11,6 +11,7 @@ pub struct Settings {
     pub port: Option<u16>,
     pub ui: serde_json::Value,
     pub overlay: serde_json::Value,
+    pub follow_slot: bool,
 }
 
 pub fn config_dir() -> PathBuf {

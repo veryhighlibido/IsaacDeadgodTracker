@@ -188,6 +188,17 @@ export function Items({ save, derived }: { save: SaveData; derived: Derived }) {
             ))}
           </Cells>
         )}
+        <div className="hidden-items">
+          <p>{s.hiddenItemsNote}</p>
+          <ul>
+            {derived.hiddenItems.map((item) => (
+              <li key={item.id} data-on={item.seen ? '1' : '0'}>
+                <b>{item.id}</b>
+                <span>{s.hiddenItems[item.title]}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </Sheet>
     </>
   );
