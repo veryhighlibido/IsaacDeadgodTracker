@@ -1,5 +1,5 @@
 import { isLang, type Lang, type Strings } from './i18n';
-import { COUNTER_GOALS, OPTIONAL_ACHIEVEMENTS, WATCHED_ACHIEVEMENTS } from './model';
+import { COUNTER_GOALS, OPTIONAL_ACHIEVEMENTS, OPTIONAL_GOALS, WATCHED_ACHIEVEMENTS } from './model';
 
 export type OverlaySet = 'blind' | 'watch' | 'locked' | 'progress' | 'marks';
 export type OverlayLayout = 'classic' | 'tiles';
@@ -50,9 +50,11 @@ export const TOTAL_KEYS = ['ach', 'items'] as const;
 export type TotalKey = (typeof TOTAL_KEYS)[number];
 
 export const COUNTER_KEYS = [...COUNTER_GOALS.map((goal) => `c${goal.achievementId}`), ...TOTAL_KEYS];
-export const OPTIONAL_KEYS = OPTIONAL_ACHIEVEMENTS.map((id) => `s${id}`);
-export const SECRET_KEYS = [...WATCHED_ACHIEVEMENTS.map((id) => `s${id}`), ...OPTIONAL_KEYS];
-const OVERLAY_VERSION = 2;
+const OPTIONAL_SECRET_KEYS = OPTIONAL_ACHIEVEMENTS.map((id) => `s${id}`);
+export const OPTIONAL_KEYS = [...OPTIONAL_GOALS.map((id) => `c${id}`), ...OPTIONAL_SECRET_KEYS];
+export const SECRET_KEYS = [...WATCHED_ACHIEVEMENTS.map((id) => `s${id}`), ...OPTIONAL_SECRET_KEYS];
+const OVERLAY_VERSION = 3;
+const PROMOTED_TO_COUNTERS = new Map(OPTIONAL_GOALS.map((id) => [`s${id}`, `c${id}`]));
 export const DEFAULT_ORDER = [...COUNTER_KEYS, ...SECRET_KEYS];
 
 const KNOWN_KEYS = new Set(DEFAULT_ORDER);
@@ -119,6 +121,28 @@ function pick<T extends string>(value: unknown, allowed: readonly T[], fallback:
   return allowed.includes(value as T) ? (value as T) : fallback;
 }
 
+function rawList(value: unknown): unknown[] {
+  return typeof value === 'string' ? value.split(',') : Array.isArray(value) ? value : [];
+}
+
+function promote(value: unknown): unknown[] {
+  return rawList(value).map((key) => (typeof key === 'string' ? (PROMOTED_TO_COUNTERS.get(key) ?? key) : key));
+}
+
+function migratedOff(source: Record<string, unknown>): string[] {
+  const version = Number(source.version);
+  if (version === OVERLAY_VERSION) return keys(source.off);
+  if (version === 2) return keys(promote(source.off));
+  return keys([...keys(source.off), ...OPTIONAL_KEYS]);
+}
+
+function migratedBare(source: Record<string, unknown>): string[] {
+  if (Number(source.version) !== 2) return keys(source.bare);
+  const hidden = new Set(rawList(source.off));
+  const kept = OPTIONAL_GOALS.filter((id) => !hidden.has(`s${id}`)).map((id) => `c${id}`);
+  return keys([...keys(source.bare), ...kept]);
+}
+
 function keys(value: unknown): string[] {
   const list = typeof value === 'string' ? value.split(',') : Array.isArray(value) ? value : [];
   const seen = new Set<string>();
@@ -153,9 +177,9 @@ export function normalizeOverlay(raw: unknown, lang: Lang): OverlayConfig {
     done: pick(source.done, DONE_LOOKS, d.done),
     meter: bool(source.meter, d.meter),
     apart: bool(source.apart, d.apart),
-    order: normalizeOrder(source.order),
-    off: Number(source.version) === OVERLAY_VERSION ? keys(source.off) : keys([...keys(source.off), ...OPTIONAL_KEYS]),
-    bare: keys(source.bare),
+    order: normalizeOrder(Number(source.version) === 2 ? promote(source.order) : source.order),
+    off: migratedOff(source),
+    bare: migratedBare(source),
     version: OVERLAY_VERSION,
   };
 }

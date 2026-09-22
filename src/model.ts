@@ -29,14 +29,26 @@ export const COUNTER_GOALS: CounterGoal[] = [
   { achievementId: 385, counterIndex: 202, goal: 10, title: 'beds' },
   { achievementId: 523, counterIndex: 495, goal: 5, title: 'batteryBum' },
   { achievementId: 336, counterIndex: 192, goal: 5, title: 'dailyStreak' },
+  { achievementId: 147, counterIndex: 17, goal: 30, title: 'bloodDonations' },
+  { achievementId: 36, counterIndex: 7, goal: 4, title: 'deathCards' },
+  { achievementId: 148, counterIndex: 18, goal: 30, title: 'slotsBroken' },
+  { achievementId: 545, counterIndex: 494, goal: 10, title: 'batteryBumsKilled' },
+  { achievementId: 377, counterIndex: 200, goal: 10, title: 'bloodClot' },
+  { achievementId: 138, counterIndex: 20, goal: 999, title: 'donationCoins' },
+  { achievementId: 12, counterIndex: 3, goal: 100, title: 'tintedRocks' },
+  { achievementId: 34, counterIndex: 1, goal: 11, title: 'momsHeartKills' },
+  { achievementId: 57, counterIndex: 11, goal: 5, title: 'isaacKills' },
+  { achievementId: 66, counterIndex: 15, goal: 10, title: 'angelItems' },
+  { achievementId: 78, counterIndex: 13, goal: 5, title: 'satanKills' },
+  { achievementId: 407, counterIndex: 158, goal: 3, title: 'hushKills' },
+  { achievementId: 409, counterIndex: 493, goal: 10, title: 'babyPlumKills' },
 ];
+
+export const OPTIONAL_GOALS = [147, 36, 148, 545, 377, 138, 12, 34, 57, 66, 78, 407, 409];
 
 export const WATCHED_ACHIEVEMENTS = [23, 24, 25, 19, 27, 82, 258, 324, 337, 361, 366, 378, 384, 386, 406];
 
-export const OPTIONAL_ACHIEVEMENTS = [
-  65, 1, 147, 389, 36, 148, 326, 330, 545, 377, 327, 138, 12, 34, 57, 66, 78, 155, 407, 408, 409, 410, 276, 547, 583,
-  635, 636, 637,
-];
+export const OPTIONAL_ACHIEVEMENTS = [65, 1, 389, 326, 330, 327, 155, 408, 410, 276, 547, 583, 635, 636, 637];
 
 export const ROUTE_COUNTERS: Array<{ index: number; title: keyof Strings['routeCounters'] }> = [
   { index: 20, title: 'donation' },

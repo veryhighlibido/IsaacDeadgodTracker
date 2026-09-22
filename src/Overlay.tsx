@@ -40,8 +40,16 @@ function Tile({ itemKey, derived, config, s, bare, fresh }: TileProps) {
         <span className="ov-cap">
           {config.labels ? (
             <span className="ov-num">
-              <b>{state.value}</b>
-              <i>/{state.goal}</i>
+              <span>
+                <b>{state.value}</b>
+                <i>/{state.goal}</i>
+              </span>
+              {['0', '8'].map((digit) => (
+                <span key={digit} className="ov-room" aria-hidden="true">
+                  <b>{String(state.goal).replace(/\d/g, digit)}</b>
+                  <i>/{state.goal}</i>
+                </span>
+              ))}
             </span>
           ) : null}
           {config.meter ? <Meter value={state.value ?? 0} goal={state.goal ?? 0} /> : null}

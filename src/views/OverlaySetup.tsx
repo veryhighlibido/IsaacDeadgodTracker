@@ -605,19 +605,21 @@ export function OverlaySetup({
               onChange={(event) => patch({ scale: Number(event.target.value) })}
             />
           </label>
-          <label className="knob">
-            <span className="knob-head">
-              {s.iconLimit} <em>{config.max === 0 ? s.none : config.max}</em>
-            </span>
-            <input
-              type="range"
-              min={0}
-              max={120}
-              step={5}
-              value={config.max}
-              onChange={(event) => patch({ max: Number(event.target.value) })}
-            />
-          </label>
+          {config.set === 'locked' ? (
+            <label className="knob">
+              <span className="knob-head">
+                {s.iconLimit} <em>{config.max === 0 ? s.none : config.max}</em>
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={120}
+                step={5}
+                value={config.max}
+                onChange={(event) => patch({ max: Number(event.target.value) })}
+              />
+            </label>
+          ) : null}
           <SegKnob
             title={s.overlayLang}
             value={config.lang}

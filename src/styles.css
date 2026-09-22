@@ -1421,15 +1421,31 @@ input[type='color'] {
 }
 
 .ov-num {
+  display: inline-grid;
+  justify-items: center;
   line-height: 1;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+.ov-num > span {
+  grid-area: 1 / 1;
+}
+
+.ov-num > .ov-room {
+  visibility: hidden;
+}
+
+.overlay[data-cap='right'] .ov-num {
+  justify-items: start;
 }
 
 .ov-num b {
   font-size: calc(var(--tile) * 0.42);
   font-weight: 700;
 }
+
+
 
 .ov-num i {
   font-style: normal;
