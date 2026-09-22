@@ -72,7 +72,6 @@ export function Overview({ live, derived }: { live: LiveState; derived: Derived 
             total={derived.items.total}
             rest={rest(derived.items.done, derived.items.total)}
           />
-          <Row label={s.extras} value={derived.extras.done} total={derived.extras.total} rest="—" />
         </Rows>
       </Sheet>
 

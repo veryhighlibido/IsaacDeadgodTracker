@@ -82,7 +82,6 @@ const en = {
   filters: { locked: 'Locked', all: 'All', unlocked: 'Unlocked' },
   search: 'search',
   empty: 'nothing here',
-  countsToward: (n: number) => `counts ${n}`,
   secrets: 'Secrets',
   challenges: 'Challenges',
   items: 'Items',
@@ -93,7 +92,6 @@ const en = {
   marksHard: 'Marks hard',
   marksAny: 'Marks any',
   counters: 'Counters',
-  extras: 'Not counted',
   watched: 'Watched',
   unlockLog: 'Unlocked',
   kinds: { challenge: 'challenge', item: 'item', mark: 'mark' },
@@ -121,7 +119,7 @@ const en = {
   numbers: 'Numbers',
   backdrop: 'Backdrop',
   overlayLang: 'Overlay language',
-  totals: { ach: 'Achievements unlocked', items: 'Items touched' },
+  totals: { ach: 'Dead God', items: 'Items touched', hard: 'Hard marks' },
   hiddenItemsNote:
     'The count also includes three hidden entries. The game writes them to the save and counts them on its Stats screen, but never shows them in the collection.',
   hiddenItems: {
@@ -273,7 +271,6 @@ const ru: Strings = {
   filters: { locked: 'Закрытые', all: 'Все', unlocked: 'Открытые' },
   search: 'поиск',
   empty: 'пусто',
-  countsToward: (n: number) => `в зачете ${n}`,
   secrets: 'Секреты',
   challenges: 'Челленджи',
   items: 'Предметы',
@@ -284,7 +281,6 @@ const ru: Strings = {
   marksHard: 'Марки хард',
   marksAny: 'Марки любые',
   counters: 'Счетчики',
-  extras: 'Вне зачета',
   watched: 'Под наблюдением',
   unlockLog: 'Открылось',
   kinds: { challenge: 'челлендж', item: 'предмет', mark: 'марка' },
@@ -312,7 +308,7 @@ const ru: Strings = {
   numbers: 'Цифры',
   backdrop: 'Подложка',
   overlayLang: 'Язык оверлея',
-  totals: { ach: 'Открыто достижений', items: 'Потроганные предметы' },
+  totals: { ach: 'Dead God', items: 'Потроганные предметы', hard: 'Метки на харде' },
   hiddenItemsNote:
     'В счёт входят ещё три скрытые отметки. Игра пишет их в сейв и учитывает на экране Stats, но в коллекции не показывает.',
   hiddenItems: {

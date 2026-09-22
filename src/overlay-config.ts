@@ -46,14 +46,15 @@ export const FONTS: OverlayFont[] = ['mono', 'game'];
 export const LOCKED_LOOKS: LockedLook[] = ['color', 'gray'];
 export const DONE_LOOKS: DoneLook[] = ['check', 'hide', 'dim'];
 
-export const TOTAL_KEYS = ['ach', 'items'] as const;
+export const TOTAL_KEYS = ['ach', 'items', 'hard'] as const;
 export type TotalKey = (typeof TOTAL_KEYS)[number];
 
 export const COUNTER_KEYS = [...COUNTER_GOALS.map((goal) => `c${goal.achievementId}`), ...TOTAL_KEYS];
 const OPTIONAL_SECRET_KEYS = OPTIONAL_ACHIEVEMENTS.map((id) => `s${id}`);
-export const OPTIONAL_KEYS = [...OPTIONAL_GOALS.map((id) => `c${id}`), ...OPTIONAL_SECRET_KEYS];
+const ADDED_IN_4 = ['hard'];
+export const OPTIONAL_KEYS = [...OPTIONAL_GOALS.map((id) => `c${id}`), ...ADDED_IN_4, ...OPTIONAL_SECRET_KEYS];
 export const SECRET_KEYS = [...WATCHED_ACHIEVEMENTS.map((id) => `s${id}`), ...OPTIONAL_SECRET_KEYS];
-const OVERLAY_VERSION = 3;
+const OVERLAY_VERSION = 4;
 const PROMOTED_TO_COUNTERS = new Map(OPTIONAL_GOALS.map((id) => [`s${id}`, `c${id}`]));
 export const DEFAULT_ORDER = [...COUNTER_KEYS, ...SECRET_KEYS];
 
@@ -132,7 +133,8 @@ function promote(value: unknown): unknown[] {
 function migratedOff(source: Record<string, unknown>): string[] {
   const version = Number(source.version);
   if (version === OVERLAY_VERSION) return keys(source.off);
-  if (version === 2) return keys(promote(source.off));
+  if (version === 3) return keys([...keys(source.off), ...ADDED_IN_4]);
+  if (version === 2) return keys([...keys(promote(source.off)), ...ADDED_IN_4]);
   return keys([...keys(source.off), ...OPTIONAL_KEYS]);
 }
 

@@ -4,8 +4,9 @@ import { ACHIEVEMENT_BY_ID, ACHIEVEMENTS, CHALLENGES, CHARACTERS, ITEMS } from '
 import type { Strings } from './i18n';
 
 export const DEAD_GOD_ID = 637;
-export const DEAD_GOD_LAST_REQUIRED = 636;
-export const EXTRA_ACHIEVEMENTS = [638, 639, 640, 641];
+export const MARK_TOTAL = MARK_MATRIX.length * MARK_BOSSES.length;
+
+export const ACHIEVEMENT_GOAL = 641;
 
 export const HIDDEN_ITEMS: Array<{ id: number; title: keyof Strings['hiddenItems'] }> = [
   { id: 43, title: 'pill' },
@@ -80,7 +81,6 @@ export interface MarkCell {
 export interface Derived {
   deadGod: Progress;
   achievements: Progress;
-  extras: Progress;
   challenges: Progress;
   items: Progress;
   hiddenItems: Array<{ id: number; title: keyof Strings['hiddenItems']; seen: boolean }>;
@@ -102,13 +102,12 @@ function progress(done: number, total: number): Progress {
 export function derive(save: SaveData): Derived {
   const achievements = save.achievements;
   const lockedAchievements: number[] = [];
+  const total = achievements.length - 1;
   let unlocked = 0;
-  for (let id = 1; id <= DEAD_GOD_LAST_REQUIRED; id++) {
+  for (let id = 1; id <= total; id++) {
     if (achievements[id]) unlocked++;
     else lockedAchievements.push(id);
   }
-  let extras = 0;
-  for (const id of EXTRA_ACHIEVEMENTS) if (achievements[id]) extras++;
   let achievementsDone = 0;
   for (const achievement of ACHIEVEMENTS) if (achievements[achievement.id]) achievementsDone++;
 
@@ -138,17 +137,15 @@ export function derive(save: SaveData): Derived {
     }
     marks.push(row);
   }
-  const markTotal = MARK_MATRIX.length * MARK_BOSSES.length;
 
   return {
-    deadGod: progress(unlocked, DEAD_GOD_LAST_REQUIRED),
+    deadGod: progress(unlocked, total),
     achievements: progress(achievementsDone, ACHIEVEMENTS.length),
-    extras: progress(extras, EXTRA_ACHIEVEMENTS.length),
     challenges: progress(challengesDone, CHALLENGES.length),
     items: progress(itemsSeen, ITEMS_TOTAL),
     hiddenItems,
-    marksHard: progress(hard, markTotal),
-    marksAny: progress(any, markTotal),
+    marksHard: progress(hard, MARK_TOTAL),
+    marksAny: progress(any, MARK_TOTAL),
     lockedAchievements,
     lockedChallenges,
     counterGoals: COUNTER_GOALS.map((goal) => ({

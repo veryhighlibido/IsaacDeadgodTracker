@@ -1,6 +1,8 @@
-import { ACHIEVEMENTS, sprite } from './data';
+import { sprite } from './data';
 import type { Strings } from './i18n';
-import { achievementName, COUNTER_GOALS, ITEMS_TOTAL, type Derived } from './model';
+import { achievementName, ACHIEVEMENT_GOAL, COUNTER_GOALS, DEAD_GOD_ID, ITEMS_TOTAL, MARK_TOTAL, type Derived } from './model';
+
+const DEATH_CERTIFICATE_ID = 636;
 
 export interface ItemMeta {
   icon: string;
@@ -23,7 +25,10 @@ function idOf(key: string): number {
 
 export function itemMeta(key: string, s: Strings): ItemMeta {
   if (key === 'ach') {
-    return { icon: sprite.ui('trophy'), name: s.totals.ach, note: s.goalOf(ACHIEVEMENTS.length), secret: false };
+    return { icon: sprite.achievement(DEAD_GOD_ID), name: s.totals.ach, note: s.goalOf(ACHIEVEMENT_GOAL), secret: false };
+  }
+  if (key === 'hard') {
+    return { icon: sprite.achievement(DEATH_CERTIFICATE_ID), name: s.totals.hard, note: s.goalOf(MARK_TOTAL), secret: false };
   }
   if (key === 'items') {
     return { icon: sprite.ui('breakfast'), name: s.totals.items, note: s.goalOf(ITEMS_TOTAL), secret: false };
@@ -42,8 +47,8 @@ export function itemMeta(key: string, s: Strings): ItemMeta {
 }
 
 export function itemState(key: string, derived: Derived): ItemState {
-  if (key === 'ach' || key === 'items') {
-    const progress = key === 'ach' ? derived.achievements : derived.items;
+  if (key === 'ach' || key === 'items' || key === 'hard') {
+    const progress = key === 'ach' ? derived.deadGod : key === 'items' ? derived.items : derived.marksHard;
     return { done: progress.done >= progress.total, value: progress.done, goal: progress.total };
   }
   const goal = derived.counterGoals.find((item) => `c${item.achievementId}` === key);

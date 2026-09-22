@@ -22,24 +22,24 @@ Nicalis or Edmund McMillen, and claims no ownership of the artwork. If the
 rights holders object to its use here, it will be removed.
 
 --------------------------------------------------------------------------
-Iosevka — public/fonts/Iosevka-400.woff2, -600.woff2, -700.woff2
+Iosevka — public/fonts/Iosevka-400.ttf, -600.ttf, -700.ttf
 --------------------------------------------------------------------------
 Copyright (c) 2015-2026, Renzhi Li (aka. Belleve Invis, belleve@typeof.net)
 Licensed under the SIL Open Font License, Version 1.1 — see
 third-party/OFL-1.1.txt. Upstream: https://github.com/be5invis/Iosevka
-The files here are subsetted WOFF2 builds of that font.
+The files here are subsetted TrueType builds of that font.
 
 --------------------------------------------------------------------------
-Rubik — public/fonts/Rubik-latin.woff2, Rubik-cyrillic.woff2
+Rubik — public/fonts/Rubik-latin.ttf, Rubik-cyrillic.ttf
 --------------------------------------------------------------------------
 Copyright 2015 The Rubik Project Authors
 (https://github.com/googlefonts/rubik)
 Licensed under the SIL Open Font License, Version 1.1 — see
 third-party/OFL-1.1.txt.
-The files here are subsetted WOFF2 builds of that font.
+The files here are subsetted TrueType builds of that font.
 
 --------------------------------------------------------------------------
-IsaacUpheaval — public/fonts/IsaacUpheaval.woff2
+IsaacUpheaval — public/fonts/IsaacUpheaval.ttf
 --------------------------------------------------------------------------
 The Binding of Isaac community variant of the Upheaval typeface by
 Brian Kent (Aenigma Fonts), circulated as freeware and used by fan tools for

@@ -4,7 +4,7 @@ import type { SaveData } from '../core/format';
 import { ACHIEVEMENTS, CHALLENGES, ITEMS, sprite } from '../data';
 import { useLang, type Strings } from '../i18n';
 import type { LiveState } from '../live';
-import { DEAD_GOD_LAST_REQUIRED, type Derived } from '../model';
+import type { Derived } from '../model';
 import { Cell, Cells, Sheet, Void } from '../ui';
 
 type Filter = 'locked' | 'all' | 'unlocked';
@@ -62,7 +62,6 @@ export function Achievements({ save, live }: { save: SaveData; live: LiveState }
     });
   }, [save, filter, query]);
 
-  const required = list.filter((achievement) => achievement.id <= DEAD_GOD_LAST_REQUIRED).length;
 
   return (
     <>
@@ -71,7 +70,7 @@ export function Achievements({ save, live }: { save: SaveData; live: LiveState }
         onFilter={setFilter}
         query={query}
         onQuery={setQuery}
-        right={`${list.length} · ${s.countsToward(required)}`}
+        right={String(list.length)}
         s={s}
       />
       <Sheet title={s.secrets}>
