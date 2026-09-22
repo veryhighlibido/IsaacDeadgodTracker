@@ -28,7 +28,12 @@ export function itemMeta(key: string, s: Strings): ItemMeta {
     return { icon: sprite.achievement(DEAD_GOD_ID), name: s.totals.ach, note: s.goalOf(ACHIEVEMENT_GOAL), secret: false };
   }
   if (key === 'hard') {
-    return { icon: sprite.achievement(DEATH_CERTIFICATE_ID), name: s.totals.hard, note: s.goalOf(MARK_TOTAL), secret: false };
+    return {
+      icon: sprite.achievement(DEATH_CERTIFICATE_ID),
+      name: achievementName(DEATH_CERTIFICATE_ID),
+      note: `${s.totals.hard} · ${s.goalOf(MARK_TOTAL)}`,
+      secret: false,
+    };
   }
   if (key === 'items') {
     return { icon: sprite.ui('breakfast'), name: s.totals.items, note: s.goalOf(ITEMS_TOTAL), secret: false };

@@ -49,7 +49,7 @@ export const OPTIONAL_GOALS = [147, 36, 148, 545, 377, 138, 12, 34, 57, 66, 78, 
 
 export const WATCHED_ACHIEVEMENTS = [23, 24, 25, 19, 27, 82, 258, 324, 337, 361, 366, 378, 384, 386, 406];
 
-export const OPTIONAL_ACHIEVEMENTS = [65, 1, 389, 326, 330, 327, 155, 408, 410, 276, 547, 583, 635, 636, 637];
+export const OPTIONAL_ACHIEVEMENTS = [65, 1, 389, 326, 330, 327, 155, 408, 410, 276, 547, 583, 635];
 
 export const ROUTE_COUNTERS: Array<{ index: number; title: keyof Strings['routeCounters'] }> = [
   { index: 20, title: 'donation' },

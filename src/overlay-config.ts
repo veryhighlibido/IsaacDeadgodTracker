@@ -51,10 +51,9 @@ export type TotalKey = (typeof TOTAL_KEYS)[number];
 
 export const COUNTER_KEYS = [...COUNTER_GOALS.map((goal) => `c${goal.achievementId}`), ...TOTAL_KEYS];
 const OPTIONAL_SECRET_KEYS = OPTIONAL_ACHIEVEMENTS.map((id) => `s${id}`);
-const ADDED_IN_4 = ['hard'];
-export const OPTIONAL_KEYS = [...OPTIONAL_GOALS.map((id) => `c${id}`), ...ADDED_IN_4, ...OPTIONAL_SECRET_KEYS];
+export const OPTIONAL_KEYS = [...OPTIONAL_GOALS.map((id) => `c${id}`), 'hard', ...OPTIONAL_SECRET_KEYS];
 export const SECRET_KEYS = [...WATCHED_ACHIEVEMENTS.map((id) => `s${id}`), ...OPTIONAL_SECRET_KEYS];
-const OVERLAY_VERSION = 4;
+const OVERLAY_VERSION = 5;
 const PROMOTED_TO_COUNTERS = new Map(OPTIONAL_GOALS.map((id) => [`s${id}`, `c${id}`]));
 export const DEFAULT_ORDER = [...COUNTER_KEYS, ...SECRET_KEYS];
 
@@ -130,19 +129,39 @@ function promote(value: unknown): unknown[] {
   return rawList(value).map((key) => (typeof key === 'string' ? (PROMOTED_TO_COUNTERS.get(key) ?? key) : key));
 }
 
-function migratedOff(source: Record<string, unknown>): string[] {
-  const version = Number(source.version);
-  if (version === OVERLAY_VERSION) return keys(source.off);
-  if (version === 3) return keys([...keys(source.off), ...ADDED_IN_4]);
-  if (version === 2) return keys([...keys(promote(source.off)), ...ADDED_IN_4]);
-  return keys([...keys(source.off), ...OPTIONAL_KEYS]);
-}
+const MERGED_INTO_TOTALS: Array<[string, string]> = [
+  ['s637', 'ach'],
+  ['s636', 'hard'],
+];
 
-function migratedBare(source: Record<string, unknown>): string[] {
-  if (Number(source.version) !== 2) return keys(source.bare);
-  const hidden = new Set(rawList(source.off));
-  const kept = OPTIONAL_GOALS.filter((id) => !hidden.has(`s${id}`)).map((id) => `c${id}`);
-  return keys([...keys(source.bare), ...kept]);
+function migrate(source: Record<string, unknown>): { off: unknown[]; bare: unknown[]; order: unknown[] } {
+  const version = Number(source.version);
+  let off = rawList(source.off);
+  let bare = rawList(source.bare);
+  let order = rawList(source.order);
+  if (version === OVERLAY_VERSION) return { off, bare, order };
+  if (!(version >= 2)) return { off: [...off, ...OPTIONAL_KEYS], bare, order };
+  if (version === 2) {
+    const hidden = new Set(off);
+    bare = [...bare, ...OPTIONAL_GOALS.filter((id) => !hidden.has(`s${id}`)).map((id) => `c${id}`)];
+    off = promote(off);
+    order = promote(order);
+  }
+  if (version <= 3) off = [...off, 'hard'];
+  for (const [secret, total] of MERGED_INTO_TOTALS) {
+    const hidden = new Set(off);
+    const secretShown = !hidden.has(secret);
+    const totalShown = !hidden.has(total);
+    if (secretShown && !totalShown) {
+      off = off.filter((key) => key !== total);
+      bare = [...bare, total];
+      order = order.filter((key) => key !== total).map((key) => (key === secret ? total : key));
+    } else {
+      order = order.includes(total) ? order.filter((key) => key !== secret) : order.map((key) => (key === secret ? total : key));
+    }
+    off = off.filter((key) => key !== secret);
+  }
+  return { off, bare, order };
 }
 
 function keys(value: unknown): string[] {
@@ -161,6 +180,7 @@ export function normalizeOrder(value: unknown): string[] {
 export function normalizeOverlay(raw: unknown, lang: Lang): OverlayConfig {
   const source = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   const d = DEFAULT_OVERLAY;
+  const migrated = migrate(source);
   return {
     set: pick(source.set, OVERLAY_SETS.map((item) => item.id), d.set),
     size: num(source.size, d.size, 16, 160),
@@ -179,9 +199,9 @@ export function normalizeOverlay(raw: unknown, lang: Lang): OverlayConfig {
     done: pick(source.done, DONE_LOOKS, d.done),
     meter: bool(source.meter, d.meter),
     apart: bool(source.apart, d.apart),
-    order: normalizeOrder(Number(source.version) === 2 ? promote(source.order) : source.order),
-    off: migratedOff(source),
-    bare: migratedBare(source),
+    order: normalizeOrder(migrated.order),
+    off: keys(migrated.off),
+    bare: keys(migrated.bare),
     version: OVERLAY_VERSION,
   };
 }
