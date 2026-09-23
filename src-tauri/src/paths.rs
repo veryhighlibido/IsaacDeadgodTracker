@@ -28,10 +28,17 @@ pub struct SourceInfo {
     pub edition: String,
     pub edition_label: String,
     pub dir: String,
+    pub cloud: bool,
+    pub account: Option<String>,
     pub slots: Vec<SlotInfo>,
 }
 
-fn documents_roots() -> Vec<PathBuf> {
+pub const CLOUD_EDITIONS: &[(&str, &str, &str)] = &[
+    ("rep+", "repentancePlus", "Repentance+"),
+    ("rep_", "repentance", "Repentance"),
+];
+
+pub fn documents_roots() -> Vec<PathBuf> {
     let mut roots: Vec<PathBuf> = Vec::new();
     if let Some(docs) = dirs::document_dir() {
         roots.push(docs);
@@ -45,7 +52,7 @@ fn documents_roots() -> Vec<PathBuf> {
     roots
 }
 
-fn modified_ms(meta: &std::fs::Metadata) -> Option<u64> {
+pub fn modified_ms(meta: &std::fs::Metadata) -> Option<u64> {
     meta.modified()
         .ok()
         .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
@@ -61,13 +68,13 @@ pub fn looks_like_save(path: &Path) -> bool {
     file.read_exact(&mut head).is_ok() && &head == SAVE_HEADER
 }
 
-fn scan_dir(dir: &Path, edition: &str, edition_label: &str) -> Option<SourceInfo> {
-    if !dir.is_dir() {
-        return None;
-    }
+pub fn scan_slots(dir: &Path, prefix: &str) -> Vec<SlotInfo> {
     let mut slots = Vec::new();
+    if !dir.is_dir() {
+        return slots;
+    }
     for slot in 1u8..=3 {
-        let path = dir.join(format!("persistentgamedata{slot}.dat"));
+        let path = dir.join(format!("{prefix}persistentgamedata{slot}.dat"));
         let Ok(meta) = std::fs::metadata(&path) else {
             continue;
         };
@@ -82,6 +89,11 @@ fn scan_dir(dir: &Path, edition: &str, edition_label: &str) -> Option<SourceInfo
             looks_like_save: looks_like_save(&path),
         });
     }
+    slots
+}
+
+fn scan_dir(dir: &Path, prefix: &str, edition: &str, edition_label: &str, account: Option<String>) -> Option<SourceInfo> {
+    let slots = scan_slots(dir, prefix);
     if slots.is_empty() {
         return None;
     }
@@ -89,6 +101,8 @@ fn scan_dir(dir: &Path, edition: &str, edition_label: &str) -> Option<SourceInfo
         edition: edition.to_string(),
         edition_label: edition_label.to_string(),
         dir: dir.to_string_lossy().to_string(),
+        cloud: !prefix.is_empty(),
+        account,
         slots,
     })
 }
@@ -104,7 +118,14 @@ pub fn discover() -> Vec<SourceInfo> {
             if !seen.insert(key) {
                 continue;
             }
-            if let Some(info) = scan_dir(&dir, edition, label) {
+            if let Some(info) = scan_dir(&dir, "", edition, label, None) {
+                out.push(info);
+            }
+        }
+    }
+    for cloud in crate::storage::cloud_dirs() {
+        for (prefix, edition, label) in CLOUD_EDITIONS {
+            if let Some(info) = scan_dir(&cloud.dir, prefix, edition, label, cloud.account.clone()) {
                 out.push(info);
             }
         }

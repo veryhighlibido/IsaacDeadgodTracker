@@ -6,12 +6,59 @@ pub const DEFAULT_PORT: u16 = 35455;
 
 #[derive(Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all = "camelCase", default)]
+pub struct Preset {
+    pub id: String,
+    pub name: String,
+    pub config: serde_json::Value,
+    pub draft: Option<serde_json::Value>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum CloseAction {
+    Tray,
+    Exit,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase", default)]
 pub struct Settings {
     pub save_path: Option<String>,
     pub port: Option<u16>,
     pub ui: serde_json::Value,
     pub overlay: serde_json::Value,
     pub follow_slot: bool,
+    pub presets: Vec<Preset>,
+    pub active_preset: Option<String>,
+    pub close_action: Option<CloseAction>,
+    pub lang: Option<String>,
+}
+
+impl Settings {
+    pub fn active(&self) -> Option<&Preset> {
+        self.active_preset
+            .as_deref()
+            .and_then(|id| self.presets.iter().find(|preset| preset.id == id))
+            .or_else(|| self.presets.first())
+    }
+
+    pub fn preset_overlays(&self) -> serde_json::Map<String, serde_json::Value> {
+        self.presets
+            .iter()
+            .map(|preset| (preset.id.clone(), preset.draft.clone().unwrap_or_else(|| preset.config.clone())))
+            .collect()
+    }
+
+    pub fn live_overlay(&self) -> serde_json::Value {
+        match self.active() {
+            Some(preset) => preset.draft.clone().unwrap_or_else(|| preset.config.clone()),
+            None => self.overlay.clone(),
+        }
+    }
+
+    pub fn russian(&self) -> bool {
+        self.lang.as_deref() == Some("ru")
+    }
 }
 
 pub fn config_dir() -> PathBuf {

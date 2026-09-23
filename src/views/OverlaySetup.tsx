@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { DragEvent } from 'react';
 
-import { api, API_PARAM } from '../api';
+import { API_PARAM } from '../api';
 import { LANGS, useLang, type Lang, type Strings } from '../i18n';
 import {
   CAPTIONS,
@@ -13,7 +13,6 @@ import {
   LOCKED_LOOKS,
   decodeOverlayCode,
   encodeOverlayCode,
-  normalizeOverlay,
   OVERLAY_SETS,
   overlayQuery,
   isSecretKey,
@@ -24,45 +23,24 @@ import {
 } from '../overlay-config';
 import { itemMeta } from '../overlay-items';
 import { Sprite } from '../sprite';
-import { Sheet } from '../ui';
-
-function Seg<T extends string>({
-  value,
-  options,
-  label,
-  onChange,
-}: {
-  value: T;
-  options: readonly T[];
-  label: (option: T) => string;
-  onChange: (option: T) => void;
-}) {
-  return (
-    <div className="seg">
-      {options.map((option) => (
-        <button key={option} type="button" data-on={value === option ? '1' : '0'} onClick={() => onChange(option)}>
-          {label(option)}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function SegKnob<T extends string>(props: {
-  title: string;
-  value: T;
-  options: readonly T[];
-  label: (option: T) => string;
-  onChange: (option: T) => void;
-}) {
-  const { title, ...seg } = props;
-  return (
-    <div className="knob">
-      <span className="knob-head">{title}</span>
-      <Seg {...seg} />
-    </div>
-  );
-}
+import {
+  activate,
+  activePreset,
+  createPreset,
+  duplicatePreset,
+  editorConfig,
+  movePreset,
+  patchDraft,
+  removePreset,
+  renamePreset,
+  revertDraft,
+  saveDraft,
+  setDraft,
+  usePresets,
+  type Preset,
+  type PresetState,
+} from '../presets';
+import { Seg, SegKnob, Sheet, Void } from '../ui';
 
 function FineTune({
   config,
@@ -387,28 +365,205 @@ function Preview({
   );
 }
 
-export function OverlaySetup({
-  port,
-  saved,
-  onChange,
-}: {
-  port: number | null;
-  saved: unknown;
-  onChange: (config: OverlayConfig) => void;
-}) {
-  const { lang, s } = useLang();
-  const [config, setConfig] = useState<OverlayConfig>(() => normalizeOverlay(saved, lang));
+type LinkMode = 'live' | 'preset' | 'snapshot';
+
+const LINK_MODES: LinkMode[] = ['live', 'preset', 'snapshot'];
+
+function LinkPicker({ base, preset, config, s }: { base: string; preset: Preset; config: OverlayConfig; s: Strings }) {
+  const [mode, setMode] = useState<LinkMode>('live');
   const [copied, setCopied] = useState(false);
+  const url =
+    mode === 'live'
+      ? `${base}/overlay?live=1`
+      : mode === 'preset'
+        ? `${base}/overlay?preset=${encodeURIComponent(preset.id)}`
+        : `${base}/overlay?${overlayQuery(config)}`;
+  const hint = mode === 'live' ? s.linkHints.live : mode === 'preset' ? s.linkHints.preset(preset.name) : s.linkHints.snapshot;
+
+  const copy = () => {
+    navigator.clipboard
+      .writeText(url)
+      .then(() => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1600);
+      })
+      .catch(() => undefined);
+  };
+
+  return (
+    <>
+      <div className="link-row">
+        <Seg
+          value={mode}
+          options={LINK_MODES}
+          label={(option) => s.linkModes[option]}
+          onChange={(option) => {
+            setMode(option);
+            setCopied(false);
+          }}
+        />
+        <code className="url" title={url}>
+          {url}
+        </code>
+        <button type="button" className="btn primary" onClick={copy}>
+          {copied ? s.copied : s.copy}
+        </button>
+      </div>
+      <div className="link-hint">{hint}</div>
+    </>
+  );
+}
+
+function PresetBar({ state, s }: { state: PresetState; s: Strings }) {
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [name, setName] = useState('');
+  const [asking, setAsking] = useState(false);
+  const [dragging, setDragging] = useState<string | null>(null);
+  const [drop, setDrop] = useState<{ key: string; after: boolean } | null>(null);
+  const current = activePreset(state);
+
+  const startRename = (preset: Preset | null | undefined) => {
+    if (!preset) return;
+    setAsking(false);
+    setRenaming(preset.id);
+    setName(preset.name);
+  };
+
+  const finishRename = () => {
+    if (renaming) renamePreset(renaming, name);
+    setRenaming(null);
+  };
+
+  const endDrag = () => {
+    setDragging(null);
+    setDrop(null);
+  };
+
+  const onDragOver = (event: DragEvent<HTMLLIElement>, key: string) => {
+    if (!dragging) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    const rect = event.currentTarget.getBoundingClientRect();
+    const after = event.clientX > rect.left + rect.width / 2;
+    if (drop?.key !== key || drop.after !== after) setDrop({ key, after });
+  };
+
+  const onDrop = (event: DragEvent<HTMLLIElement>) => {
+    event.preventDefault();
+    if (dragging && drop) movePreset(dragging, drop.key, drop.after);
+    endDrag();
+  };
+
+  const dirty = Boolean(current?.draft);
+
+  return (
+    <Sheet title={s.presets} note={s.presetsNote}>
+      <div className="presets">
+        <ol className="preset-list">
+          {state.presets.map((preset) => (
+            <li
+              key={preset.id}
+              className="preset"
+              data-on={preset.id === current?.id ? '1' : '0'}
+              data-dragging={dragging === preset.id ? '1' : '0'}
+              data-drop={drop?.key === preset.id && dragging !== preset.id ? (drop.after ? 'after' : 'before') : undefined}
+              onDragOver={(event) => onDragOver(event, preset.id)}
+              onDrop={onDrop}
+            >
+              {renaming === preset.id ? (
+                <input
+                  type="text"
+                  className="preset-input"
+                  value={name}
+                  maxLength={40}
+                  aria-label={s.presetName}
+                  spellCheck={false}
+                  autoFocus
+                  onFocus={(event) => event.target.select()}
+                  onChange={(event) => setName(event.target.value)}
+                  onBlur={finishRename}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') finishRename();
+                    if (event.key === 'Escape') setRenaming(null);
+                  }}
+                />
+              ) : (
+                <button
+                  type="button"
+                  draggable
+                  title={s.dragHint}
+                  onClick={() => activate(preset.id)}
+                  onDoubleClick={() => startRename(preset)}
+                  onDragStart={(event) => {
+                    event.dataTransfer.effectAllowed = 'move';
+                    event.dataTransfer.setData('text/plain', preset.id);
+                    setDragging(preset.id);
+                  }}
+                  onDragEnd={endDrag}
+                >
+                  <span>{preset.name}</span>
+                  {preset.draft ? <i className="preset-dot" title={s.draftMark} aria-label={s.draftMark} /> : null}
+                </button>
+              )}
+            </li>
+          ))}
+        </ol>
+        <div className="preset-tools">
+          {asking && current ? (
+            <>
+              <span className="preset-ask">{s.deleteAsk(current.name)}</span>
+              <button
+                type="button"
+                className="btn danger"
+                onClick={() => {
+                  removePreset(current.id);
+                  setAsking(false);
+                }}
+              >
+                {s.deleteYes}
+              </button>
+              <button type="button" className="btn" onClick={() => setAsking(false)}>
+                {s.deleteNo}
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" className="btn" onClick={() => startRename(createPreset())}>
+                {s.newPreset}
+              </button>
+              <button type="button" className="btn" onClick={() => startRename(duplicatePreset())}>
+                {s.duplicatePreset}
+              </button>
+              <button type="button" className="btn" onClick={() => startRename(current)}>
+                {s.renamePreset}
+              </button>
+              <button type="button" className="btn" disabled={state.presets.length < 2} onClick={() => setAsking(true)}>
+                {s.deletePreset}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+      <div className="draft-row" data-dirty={dirty ? '1' : '0'}>
+        <span>{dirty ? s.draftDirty : s.draftClean}</span>
+        <button type="button" className="btn primary" disabled={!dirty} onClick={saveDraft}>
+          {s.saveDraft}
+        </button>
+        <button type="button" className="btn" disabled={!dirty} onClick={revertDraft}>
+          {s.revertDraft}
+        </button>
+      </div>
+    </Sheet>
+  );
+}
+
+export function OverlaySetup({ port }: { port: number | null }) {
+  const { lang, s } = useLang();
+  const presets = usePresets();
+  const current = activePreset(presets);
   const [code, setCode] = useState('');
   const [share, setShare] = useState<'copied' | 'applied' | 'invalid' | null>(null);
   const [size, setSize] = useState<{ width: number; height: number } | null>(null);
-  const timer = useRef<number | undefined>(undefined);
-  const hydrated = useRef(Boolean(saved));
-  const dirty = useRef(false);
-  const report = useRef(onChange);
-  report.current = onChange;
-  const latest = useRef(config);
-  latest.current = config;
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
@@ -421,50 +576,17 @@ export function OverlaySetup({
     return () => window.removeEventListener('message', onMessage);
   }, []);
 
-  useEffect(() => {
-    if (hydrated.current || dirty.current || !saved) return;
-    hydrated.current = true;
-    setConfig(normalizeOverlay(saved, lang));
-  }, [saved, lang]);
+  useEffect(() => setShare(null), [presets.active]);
 
-  useEffect(() => {
-    if (!dirty.current) return;
-    report.current(config);
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => {
-      timer.current = undefined;
-      api.saveSettings({ overlay: config }).catch(() => undefined);
-    }, 400);
-  }, [config]);
+  if (!current) return <Void>{s.reading}</Void>;
 
-  useEffect(() => {
-    return () => {
-      if (timer.current === undefined) return;
-      window.clearTimeout(timer.current);
-      api.saveSettings({ overlay: latest.current }).catch(() => undefined);
-    };
-  }, []);
-
+  const config = editorConfig(current);
   const base = port ? `http://127.0.0.1:${port}` : location.origin;
-  const url = `${base}/overlay?${overlayQuery(config)}`;
-  const patch = (next: Partial<OverlayConfig>) => {
-    dirty.current = true;
-    setConfig((current) => ({ ...current, ...next }));
-  };
+  const patch = patchDraft;
   const listed = config.set === 'blind' || config.set === 'watch';
   const tiles = config.set === 'blind' && config.layout === 'tiles';
   const ticks = sizeTicks(config.set);
   const clean = ticks.includes(config.size);
-
-  const copy = () => {
-    navigator.clipboard
-      .writeText(url)
-      .then(() => {
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 1600);
-      })
-      .catch(() => undefined);
-  };
 
   const copyCode = () => {
     encodeOverlayCode(config)
@@ -479,8 +601,7 @@ export function OverlaySetup({
         setShare('invalid');
         return;
       }
-      dirty.current = true;
-      setConfig(next);
+      setDraft(next);
       setCode('');
       setShare('applied');
     });
@@ -490,13 +611,10 @@ export function OverlaySetup({
 
   return (
     <>
+      <PresetBar state={presets} s={s} />
+
       <Sheet title={s.overlayLink} note={size ? `${size.width}×${size.height} px` : s.overlayLinkNote}>
-        <div className="url-row">
-          <code className="url">{url}</code>
-          <button type="button" className="btn primary" onClick={copy}>
-            {copied ? s.copied : s.copy}
-          </button>
-        </div>
+        <LinkPicker base={base} preset={current} config={config} s={s} />
       </Sheet>
 
       <Sheet title={s.shareTitle} note={s.shareNote}>

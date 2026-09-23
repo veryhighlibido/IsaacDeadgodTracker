@@ -1843,7 +1843,7 @@ dependencies = [
 
 [[package]]
 name = "isaac-deadgod-tracker"
-version = "3.1.1"
+version = "4.0.0"
 dependencies = [
  "axum",
  "dirs",
@@ -1858,6 +1858,8 @@ dependencies = [
  "tauri-plugin-opener",
  "tokio",
  "tower-http",
+ "windows-sys 0.59.0",
+ "winreg",
 ]
 
 [[package]]

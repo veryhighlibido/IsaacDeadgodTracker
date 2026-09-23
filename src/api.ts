@@ -33,7 +33,47 @@ export interface SourceInfo {
   edition: string;
   editionLabel: string;
   dir: string;
+  cloud: boolean;
+  account: string | null;
   slots: SlotInfo[];
+}
+
+export type PlaceKind = 'cloud' | 'documents';
+
+export interface StorageLocation {
+  kind: PlaceKind;
+  dir: string;
+  exists: boolean;
+  account: string | null;
+  active: boolean;
+  slots: SlotInfo[];
+}
+
+export interface StorageReport {
+  steamCloud: boolean | null;
+  optionsPath: string;
+  optionsFound: boolean;
+  gameRunning: boolean;
+  backups: string;
+  locations: StorageLocation[];
+}
+
+export interface CloudSwitch {
+  ok: true;
+  copied: number;
+  backup: string | null;
+  target: string | null;
+}
+
+export class ApiError extends Error {
+  status: number;
+  code: string;
+
+  constructor(status: number, code: string) {
+    super(code);
+    this.status = status;
+    this.code = code;
+  }
 }
 
 export interface OverlayConfig {
@@ -46,11 +86,30 @@ export interface OverlayConfig {
   accent: string;
 }
 
+export type CloseAction = 'tray' | 'exit';
+
+export interface StoredPreset {
+  id: string;
+  name: string;
+  config: unknown;
+  draft: unknown;
+}
+
 export interface StatusResponse {
   status: SaveStatus;
   port: number;
   sources: SourceInfo[];
-  settings: { savePath: string | null; port: number | null; ui: unknown; overlay: unknown; followSlot: boolean };
+  settings: {
+    savePath: string | null;
+    port: number | null;
+    ui: unknown;
+    overlay: unknown;
+    followSlot: boolean;
+    presets: StoredPreset[];
+    activePreset: string | null;
+    closeAction: CloseAction | null;
+    lang: string | null;
+  };
   version: string;
 }
 
@@ -59,7 +118,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers: init?.body ? { 'content-type': 'application/json' } : undefined,
     ...init,
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) throw new ApiError(res.status, await res.text());
   return (await res.json()) as T;
 }
 
@@ -71,8 +130,16 @@ export const api = {
   pick: (lang: string) => request<{ path: string | null }>(`/api/pick?lang=${lang}`, { method: 'POST' }),
   refresh: () => request<{ ok: true }>('/api/refresh', { method: 'POST' }),
   reveal: (path: string) => request<{ ok: true }>('/api/reveal', { method: 'POST', body: JSON.stringify({ path }) }),
-  saveSettings: (body: { ui?: unknown; overlay?: unknown; followSlot?: boolean }) =>
+  saveSettings: (body: { ui?: unknown; overlay?: unknown; followSlot?: boolean; closeAction?: CloseAction; lang?: string }) =>
     request<{ ok: true }>('/api/settings', { method: 'POST', body: JSON.stringify(body) }),
+  savePresets: (body: { presets?: StoredPreset[]; active?: string }) =>
+    request<{ ok: true; active: string | null }>('/api/presets', { method: 'POST', body: JSON.stringify(body) }),
+  storage: () => request<StorageReport>('/api/storage'),
+  switchCloud: (enabled: boolean, copy: boolean) =>
+    request<CloudSwitch>('/api/storage/cloud', { method: 'POST', body: JSON.stringify({ enabled, copy }) }),
+  openDir: (dir: string) => request<{ ok: true }>('/api/open-dir', { method: 'POST', body: JSON.stringify({ dir }) }),
+  close: (action: CloseAction) =>
+    request<{ ok: true }>('/api/close', { method: 'POST', body: JSON.stringify({ action }) }),
   preview: async (path: string): Promise<Uint8Array> => {
     const res = await fetch(`${API_BASE}/api/preview?path=${encodeURIComponent(path)}`);
     if (!res.ok) throw new Error(await res.text());

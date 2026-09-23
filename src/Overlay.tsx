@@ -7,7 +7,7 @@ import { currentLang, langFromParams, strings, type Strings } from './i18n';
 import { MARK_IMAGE } from './labels';
 import { useLive } from './live';
 import { achievementName, characterName, derive, type Derived } from './model';
-import { isSecretKey, isTotalKey, parseOverlayParams, type OverlayConfig } from './overlay-config';
+import { isSecretKey, isTotalKey, normalizeOverlay, parseOverlayParams, type OverlayConfig } from './overlay-config';
 import { itemMeta, itemState } from './overlay-items';
 import { setRenderScale, Sprite } from './sprite';
 import { Meter } from './ui';
@@ -258,8 +258,15 @@ function useReportSize(node: HTMLDivElement | null) {
 export function Overlay() {
   const live = useLive();
   const [root, setRoot] = useState<HTMLDivElement | null>(null);
-  const config = useMemo(() => parseOverlayParams(location.search, langFromParams(location.search, currentLang())), []);
-  const s = strings(config.lang);
+  const fallbackLang = langFromParams(location.search, currentLang());
+  const params = new URLSearchParams(location.search);
+  const liveMode = params.has('live');
+  const presetId = params.get('preset');
+  const fixed = useMemo(() => (liveMode || presetId ? null : parseOverlayParams(location.search, fallbackLang)), []);
+  const source = liveMode ? live.prefs?.overlay : presetId ? live.prefs?.presets[presetId] : undefined;
+  const followed = useMemo(() => (source ? normalizeOverlay(source, fallbackLang) : null), [source]);
+  const config = fixed ?? followed;
+  const s = strings(config?.lang ?? fallbackLang);
   const derived = useMemo(() => (live.parsed ? derive(live.parsed.save) : null), [live.parsed]);
 
   const fresh = useMemo(() => {
@@ -269,11 +276,13 @@ export function Overlay() {
 
   useEffect(() => {
     document.documentElement.dataset.surface = 'overlay';
-    document.documentElement.lang = config.lang;
-  }, [config.lang]);
+    document.documentElement.lang = config?.lang ?? fallbackLang;
+  }, [config?.lang]);
 
   useParentFit();
   useReportSize(root);
+
+  if (!config) return <div className="overlay" data-bg="0" ref={setRoot} />;
 
   const style = {
     '--tile': `${config.size}px`,

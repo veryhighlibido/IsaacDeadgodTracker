@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-import { WS_URL, type SaveStatus } from './api';
+import { WS_URL, type CloseAction, type SaveStatus } from './api';
 import { countTrue, diffSaves } from './core/domain';
 import { parseSave, SaveFormatError, type ParsedSave } from './core/format';
 import { currentLang, strings } from './i18n';
@@ -22,8 +22,16 @@ export interface UnlockEvent {
   label?: string;
 }
 
+export interface Prefs {
+  active: string | null;
+  overlay: unknown;
+  presets: Record<string, unknown>;
+  closeAction: CloseAction | null;
+}
+
 export interface LiveState {
   connection: Connection;
+  prefs: Prefs | null;
   status: SaveStatus | null;
   parsed: ParsedSave | null;
   frame: SaveFrame | null;
@@ -34,6 +42,7 @@ export interface LiveState {
 
 const EMPTY: LiveState = {
   connection: 'connecting',
+  prefs: null,
   status: null,
   parsed: null,
   frame: null,
@@ -44,6 +53,14 @@ const EMPTY: LiveState = {
 
 let state: LiveState = EMPTY;
 const listeners = new Set<() => void>();
+const prefsListeners = new Set<(prefs: Prefs) => void>();
+
+export function onPrefs(listener: (prefs: Prefs) => void): () => void {
+  prefsListeners.add(listener);
+  return () => {
+    prefsListeners.delete(listener);
+  };
+}
 
 function emit(next: Partial<LiveState>) {
   state = { ...state, ...next };
@@ -124,8 +141,18 @@ function connect() {
   ws.onmessage = (event) => {
     if (typeof event.data === 'string') {
       try {
-        const message = JSON.parse(event.data) as { type: string; status?: SaveStatus };
+        const message = JSON.parse(event.data) as { type: string; status?: SaveStatus } & Partial<Prefs>;
         if (message.type === 'status' && message.status) emit({ status: message.status });
+        if (message.type === 'prefs') {
+          const prefs: Prefs = {
+            active: message.active ?? null,
+            overlay: message.overlay ?? null,
+            presets: message.presets && typeof message.presets === 'object' ? message.presets : {},
+            closeAction: message.closeAction ?? null,
+          };
+          emit({ prefs });
+          for (const listener of prefsListeners) listener(prefs);
+        }
       } catch {
         /* ignore malformed status */
       }

@@ -106,3 +106,41 @@ export function Cell({
 export function Void({ children }: { children: ReactNode }) {
   return <div className="void-line">{children}</div>;
 }
+
+export function Seg<T extends string>({
+  value,
+  options,
+  label,
+  onChange,
+}: {
+  value: T | null;
+  options: readonly T[];
+  label: (option: T) => string;
+  onChange: (option: T) => void;
+}) {
+  return (
+    <div className="seg">
+      {options.map((option) => (
+        <button key={option} type="button" data-on={value === option ? '1' : '0'} onClick={() => onChange(option)}>
+          {label(option)}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function SegKnob<T extends string>(props: {
+  title: string;
+  value: T | null;
+  options: readonly T[];
+  label: (option: T) => string;
+  onChange: (option: T) => void;
+}) {
+  const { title, ...seg } = props;
+  return (
+    <div className="knob">
+      <span className="knob-head">{title}</span>
+      <Seg {...seg} />
+    </div>
+  );
+}

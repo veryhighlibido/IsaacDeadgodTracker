@@ -157,6 +157,10 @@ impl Monitor {
         let _ = self.cmd.send(Ev::Cmd(Cmd::SetFollow(follow)));
     }
 
+    pub fn broadcast(&self, json: String) {
+        let _ = self.tx.send(WsMsg::Text(Arc::new(json)));
+    }
+
     fn publish_status(&self, status: Status) {
         let changed = {
             let mut shared = self.shared.lock().unwrap();

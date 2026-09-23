@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { api, type SaveStatus } from './api';
+import { api, type CloseAction, type SaveStatus } from './api';
 import { useLang, type Strings } from './i18n';
 import { clearRegression, useLive } from './live';
 import { derive } from './model';
+import { loadPresets } from './presets';
 import { Counters } from './views/Counters';
 import { Achievements, Challenges, Items } from './views/Lists';
 import { Marks } from './views/Marks';
@@ -11,6 +12,12 @@ import { Overview } from './views/Overview';
 import { OverlaySetup } from './views/OverlaySetup';
 import { Source } from './views/Source';
 import { Void } from './ui';
+
+declare global {
+  interface Window {
+    __trackerAskClose?: () => void;
+  }
+}
 
 type Tab = 'overview' | 'counters' | 'achievements' | 'marks' | 'challenges' | 'items' | 'overlay' | 'source';
 
@@ -39,24 +46,74 @@ function Readout({ status, connection, s }: { status: SaveStatus | null; connect
   );
 }
 
+function CloseAsk({ s, onDone }: { s: Strings; onDone: () => void }) {
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onDone();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onDone]);
+
+  const choose = (action: CloseAction) => {
+    onDone();
+    api.close(action).catch(() => undefined);
+  };
+
+  return (
+    <div className="modal-scrim" onMouseDown={(event) => event.target === event.currentTarget && onDone()}>
+      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="close-ask-title">
+        <div className="modal-title" id="close-ask-title">
+          {s.closeTitle}
+        </div>
+        <p>{s.closeBody}</p>
+        <p className="modal-note">{s.closeWhere}</p>
+        <div className="modal-actions">
+          <button type="button" className="btn primary" autoFocus onClick={() => choose('tray')}>
+            {s.closeActions.tray}
+          </button>
+          <button type="button" className="btn" onClick={() => choose('exit')}>
+            {s.closeActions.exit}
+          </button>
+          <button type="button" className="btn ghost" onClick={onDone}>
+            {s.cancel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function App() {
   const live = useLive();
   const { lang, s, setLang } = useLang();
   const [tab, setTabState] = useState<Tab>(() => tabFromHash() ?? 'overview');
   const [port, setPort] = useState<number | null>(null);
   const content = useRef<HTMLElement | null>(null);
-  const [overlayConfig, setOverlayConfig] = useState<unknown>(null);
+  const [askClose, setAskClose] = useState(false);
 
   useEffect(() => {
     api
       .status()
       .then((response) => {
         setPort(response.port);
-        const saved = response.settings.overlay;
-        if (saved && typeof saved === 'object') setOverlayConfig(saved);
+        loadPresets(response.settings);
       })
       .catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    api.saveSettings({ lang }).catch(() => undefined);
+  }, [lang]);
+
+  useEffect(() => {
+    window.__trackerAskClose = () => setAskClose(true);
+    return () => {
+      delete window.__trackerAskClose;
+    };
+  }, []);
+
+  const closeAskDone = useCallback(() => setAskClose(false), []);
 
   useEffect(() => {
     const sync = () => setTabState(tabFromHash() ?? 'overview');
@@ -122,11 +179,12 @@ export function App() {
             {tab === 'marks' && <Marks derived={derived} />}
             {tab === 'challenges' && <Challenges save={live.parsed.save} derived={derived} />}
             {tab === 'items' && <Items save={live.parsed.save} derived={derived} />}
-            {tab === 'overlay' && <OverlaySetup port={port} saved={overlayConfig} onChange={setOverlayConfig} />}
+            {tab === 'overlay' && <OverlaySetup port={port} />}
             {tab === 'source' && <Source status={live.status} />}
           </>
         )}
       </main>
+      {askClose ? <CloseAsk s={s} onDone={closeAskDone} /> : null}
     </div>
   );
 }

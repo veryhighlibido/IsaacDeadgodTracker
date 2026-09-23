@@ -9,6 +9,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
+use tauri::Manager;
 use rust_embed::RustEmbed;
 use serde::Deserialize;
 use serde_json::json;
@@ -20,7 +21,9 @@ use tower_http::services::{ServeDir, ServeFile};
 use crate::monitor::{Monitor, WsMsg};
 use crate::paths;
 use crate::reader;
-use crate::settings::{self, Settings};
+use crate::settings::{self, CloseAction, Preset, Settings};
+use crate::storage;
+use crate::tray;
 
 #[derive(RustEmbed)]
 #[folder = "../dist"]
@@ -78,6 +81,34 @@ pub struct AppState {
     pub dist: Option<PathBuf>,
 }
 
+pub fn prefs_message(settings: &Settings) -> String {
+    json!({
+        "type": "prefs",
+        "active": settings.active().map(|preset| preset.id.clone()),
+        "overlay": settings.live_overlay(),
+        "presets": settings.preset_overlays(),
+        "closeAction": settings.close_action,
+    })
+    .to_string()
+}
+
+impl AppState {
+    pub fn update<R>(&self, change: impl FnOnce(&mut Settings) -> R) -> R {
+        let (result, before, after) = {
+            let mut settings = self.settings.lock().unwrap();
+            let before = tray::signature(&settings);
+            let result = change(&mut settings);
+            settings::store(&settings);
+            (result, before, settings.clone())
+        };
+        self.monitor.broadcast(prefs_message(&after));
+        if tray::signature(&after) != before {
+            tray::refresh(&self.app, &after);
+        }
+        result
+    }
+}
+
 pub async fn bind(port_hint: u16) -> std::io::Result<(TcpListener, u16)> {
     let mut last_err: Option<std::io::Error> = None;
     for offset in 0..24u16 {
@@ -111,6 +142,11 @@ pub fn router(state: AppState) -> Router {
         .route("/api/pick", post(pick))
         .route("/api/refresh", post(refresh))
         .route("/api/settings", post(put_settings))
+        .route("/api/presets", post(put_presets))
+        .route("/api/close", post(close_window))
+        .route("/api/storage", get(storage_report))
+        .route("/api/storage/cloud", post(storage_cloud))
+        .route("/api/open-dir", post(open_dir))
         .route("/api/reveal", post(reveal))
         .with_state(state.clone());
 
@@ -237,9 +273,13 @@ async fn pick(State(state): State<AppState>, Query(q): Query<LangQuery>) -> Resp
     let app = state.app.clone();
     let title = dialog_title(q.lang.as_deref());
     let filter = dialog_filter(q.lang.as_deref());
-    let start = paths::discover()
-        .first()
-        .map(|src| PathBuf::from(&src.dir))
+    let report = storage::report();
+    let start = report
+        .locations
+        .iter()
+        .find(|location| location.active && location.exists)
+        .map(|location| PathBuf::from(&location.dir))
+        .or_else(|| paths::discover().first().map(|src| PathBuf::from(&src.dir)))
         .or_else(dirs::document_dir);
 
     let chosen = tokio::task::spawn_blocking(move || {
@@ -272,22 +312,139 @@ struct SettingsBody {
     ui: Option<serde_json::Value>,
     overlay: Option<serde_json::Value>,
     follow_slot: Option<bool>,
+    close_action: Option<CloseAction>,
+    lang: Option<String>,
 }
 
 async fn put_settings(State(state): State<AppState>, Json(body): Json<SettingsBody>) -> Json<serde_json::Value> {
-    let mut settings = state.settings.lock().unwrap();
-    if let Some(ui) = body.ui {
-        settings.ui = ui;
-    }
-    if let Some(overlay) = body.overlay {
-        settings.overlay = overlay;
-    }
     if let Some(follow) = body.follow_slot {
-        settings.follow_slot = follow;
         state.monitor.set_follow(follow);
     }
-    settings::store(&settings);
+    state.update(|settings| {
+        if let Some(ui) = body.ui {
+            settings.ui = ui;
+        }
+        if let Some(overlay) = body.overlay {
+            settings.overlay = overlay;
+        }
+        if let Some(follow) = body.follow_slot {
+            settings.follow_slot = follow;
+        }
+        if let Some(action) = body.close_action {
+            settings.close_action = Some(action);
+        }
+        if let Some(lang) = body.lang {
+            settings.lang = Some(lang);
+        }
+    });
     Json(json!({ "ok": true }))
+}
+
+#[derive(Deserialize)]
+struct PresetsBody {
+    presets: Option<Vec<Preset>>,
+    active: Option<String>,
+}
+
+async fn put_presets(State(state): State<AppState>, Json(body): Json<PresetsBody>) -> Response {
+    if body.presets.as_ref().is_some_and(|list| list.is_empty()) {
+        return (StatusCode::UNPROCESSABLE_ENTITY, "at least one preset is required").into_response();
+    }
+    let active = state.update(|settings| {
+        if let Some(list) = body.presets {
+            settings.presets = list;
+        }
+        if let Some(id) = body.active {
+            if settings.presets.iter().any(|preset| preset.id == id) {
+                settings.active_preset = Some(id);
+            }
+        }
+        let current = settings.active().map(|preset| preset.id.clone());
+        settings.active_preset = current.clone();
+        current
+    });
+    Json(json!({ "ok": true, "active": active })).into_response()
+}
+
+#[derive(Deserialize)]
+struct CloseBody {
+    action: CloseAction,
+}
+
+async fn close_window(State(state): State<AppState>, Json(body): Json<CloseBody>) -> Json<serde_json::Value> {
+    state.update(|settings| settings.close_action = Some(body.action));
+    let app = state.app.clone();
+    match body.action {
+        CloseAction::Tray => {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.hide();
+            }
+        }
+        CloseAction::Exit => {
+            tokio::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                app.exit(0);
+            });
+        }
+    }
+    Json(json!({ "ok": true }))
+}
+
+async fn storage_report() -> Json<storage::Report> {
+    Json(tokio::task::spawn_blocking(storage::report).await.unwrap_or_else(|_| storage::report()))
+}
+
+#[derive(Deserialize)]
+struct CloudBody {
+    enabled: bool,
+    copy: bool,
+}
+
+async fn storage_cloud(State(state): State<AppState>, Json(body): Json<CloudBody>) -> Response {
+    let current = state.settings.lock().unwrap().save_path.clone().map(PathBuf::from);
+    let result = tokio::task::spawn_blocking(move || storage::switch(body.enabled, body.copy, current.as_deref())).await;
+    match result {
+        Ok(Ok(switched)) => {
+            if let Some(target) = &switched.target {
+                state.monitor.set_target(Some(target.clone()));
+                let path = target.to_string_lossy().to_string();
+                state.update(|settings| settings.save_path = Some(path));
+            }
+            Json(json!({
+                "ok": true,
+                "copied": switched.copied,
+                "backup": switched.backup.map(|dir| dir.to_string_lossy().to_string()),
+                "target": switched.target.map(|path| path.to_string_lossy().to_string()),
+            }))
+            .into_response()
+        }
+        Ok(Err(code)) => (StatusCode::CONFLICT, code).into_response(),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "failed").into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct DirBody {
+    dir: String,
+}
+
+async fn open_dir(State(state): State<AppState>, Json(body): Json<DirBody>) -> Response {
+    use tauri_plugin_opener::OpenerExt;
+
+    let report = storage::report();
+    let known = report.locations.iter().any(|location| location.dir == body.dir)
+        || report.backups == body.dir
+        || paths::discover().iter().any(|source| source.dir == body.dir);
+    if !known {
+        return (StatusCode::FORBIDDEN, "unknown folder").into_response();
+    }
+    if !std::path::Path::new(&body.dir).is_dir() {
+        return (StatusCode::NOT_FOUND, "no such folder").into_response();
+    }
+    match state.app.opener().open_path(&body.dir, None::<&str>) {
+        Ok(()) => Json(json!({ "ok": true })).into_response(),
+        Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()).into_response(),
+    }
 }
 
 async fn reveal(State(state): State<AppState>, Json(q): Json<PathQuery>) -> Response {
@@ -316,6 +473,10 @@ async fn serve_socket(mut socket: WebSocket, state: AppState) {
     })
     .to_string();
     if socket.send(Message::Text(hello.into())).await.is_err() {
+        return;
+    }
+    let prefs = prefs_message(&state.settings.lock().unwrap().clone());
+    if socket.send(Message::Text(prefs.into())).await.is_err() {
         return;
     }
     for frame in state.monitor.history() {
